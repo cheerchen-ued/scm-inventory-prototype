@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SCM 庫存功能原型 · 五種模式</title>
+
+<!-- ant-design-vue reset -->
+<link rel="stylesheet" href="./vendor/reset.css" />
+
+<style>
+/* ===================================================================
+   SCM foundation tokens (逐字取自 scm-shell/assets/foundation.css)
+   =================================================================== */
+html:root{
+  --colors-base-blue-1:#F2FAFFFF;--colors-base-blue-2:#EBF8FFFF;--colors-base-blue-3:#C2E8FFFF;
+  --colors-base-blue-4:#99D5FFFF;--colors-base-blue-5:#70BFFFFF;--colors-base-blue-6:#44A0F4FF;
+  --colors-base-blue-7:#307CCFFF;--colors-base-blue-8:#1E5CA8FF;--colors-base-blue-9:#114082FF;
+  --colors-base-geekblue-1:#F0F5FFFF;--colors-base-geekblue-7:#1D39C4FF;
+  --colors-base-green-1:#FAFFEDFF;--colors-base-green-5:#91D13DFF;--colors-base-green-6:#74C41AFF;--colors-base-green-7:#559E0DFF;
+  --colors-base-orange-1:#FFF8E1FF;--colors-base-orange-2:#FFECB3FF;--colors-base-orange-3:#FFE082FF;--colors-base-orange-6:#FFB400FF;--colors-base-orange-9:#F59300FF;
+  --colors-base-red-1:#FFF4F0FF;--colors-base-red-6:#E65F50FF;
+  --colors-base-purple-1:#F9F0FFFF;--colors-base-purple-6:#722ED1FF;
+  --colors-brand-primary-color-primary:var(--colors-base-blue-6);
+  --colors-brand-primary-color-primary-bg:var(--colors-base-blue-1);
+  --colors-neutral-border-color-border:#D9D9D9FF;
+  --colors-neutral-border-color-border-secondary:#F0F0F0FF;
+  --colors-neutral-text-color-text:#000000E0;
+  --colors-neutral-text-color-text-secondary:#000000A5;
+  --colors-neutral-text-color-text-tertiary:#00000072;
+  --colors-neutral-text-color-text-quaternary:#0000003F;
+  --colors-neutral-text-color-text-disabled:#00000040;
+  --colors-neutral-text-color-text-heading:var(--colors-neutral-text-color-text);
+  --colors-neutral-color-bg-base:#FFFFFFFF;
+  --colors-neutral-fill-color-fill-tertiary:#0000000A;--colors-neutral-fill-color-fill-secondary:#0000000F;--colors-neutral-fill-color-fill-quaternary:#00000005;
+  /* 語意色票：「部分下架」狀態點。暫借橘色（orange-6）求顯眼；庫存告急功能(目前 showWarn:false 未啟用)上線後，再把這條改成灰/紅等，與告急的橘色區隔即可，不用全專案找色 */
+  --status-partial-offline-dot:var(--colors-base-orange-6);
+  --border-radius:6px;--border-radius-lg:8px;--border-radius-sm:4px;--border-radius-xs:2px;
+  --base-size:16px;--base-size-lg:24px;--base-size-md:20px;--base-size-sm:12px;--base-size-xl:32px;--base-size-xs:8px;--base-size-xxl:48px;--base-size-xxs:4px;
+  --space-margin:var(--base-size);--space-margin-lg:var(--base-size-lg);--space-margin-md:var(--base-size-md);
+  --space-margin-sm:var(--base-size-sm);--space-margin-xl:var(--base-size-xl);--space-margin-xs:var(--base-size-xs);
+  --space-margin-xxl:var(--base-size-xxl);--space-margin-xxs:var(--base-size-xxs);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji';
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+[v-cloak]{display:none;}
+
+/* ---------- SCM shell ---------- */
+.app-header{height:48px;display:flex;align-items:center;background:var(--colors-base-blue-5);
+  position:fixed;top:0;left:0;right:0;z-index:20;}
+.header-logo{padding:0 var(--space-margin-xxl);display:flex;align-items:center;height:100%;color:#fff;font-weight:800;font-size:18px;letter-spacing:.5px;}
+.header-logo small{font-weight:400;font-size:11px;opacity:.85;margin-left:4px;}
+.header-city{display:flex;align-items:center;justify-content:space-between;gap:var(--space-margin-xxs);
+  width:220px;background:#fff;border:1px solid var(--colors-neutral-border-color-border);
+  border-radius:var(--border-radius);padding:6px 12px;color:var(--colors-neutral-text-color-text);}
+.header-spacer{flex:1;}
+.header-icons{display:flex;align-items:center;height:100%;}
+.header-icon-btn{display:flex;align-items:center;justify-content:center;width:48px;height:100%;color:#fff;cursor:pointer;}
+.header-avatar{display:flex;align-items:center;gap:var(--space-margin-xs);height:100%;padding:0 var(--space-margin);
+  background:var(--colors-brand-primary-color-primary);color:#fff;font-weight:600;white-space:nowrap;}
+.avatar-circle{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:16px;}
+
+.global-rail{width:50px;position:fixed;top:48px;left:0;bottom:0;background:#f9fafc;border-right:1px solid #d2d6de;
+  display:flex;flex-direction:column;align-items:center;padding-top:var(--space-margin-sm);overflow-y:auto;z-index:19;}
+.global-rail-icon{width:100%;padding:12px 0;display:flex;align-items:center;justify-content:center;color:#444;}
+.global-rail-icon.active{color:#1672bd;}
+
+.app-breadcrumb{height:57px;position:fixed;top:48px;left:50px;right:0;display:flex;align-items:center;
+  gap:var(--space-margin-xxs);padding:0 var(--space-margin);background:#fff;
+  box-shadow:0 1px 1px rgba(0,0,0,.03),0 1px 3px rgba(0,0,0,.02),0 2px 2px rgba(0,0,0,.02);z-index:18;}
+.crumb-icon{color:var(--colors-neutral-text-color-text-tertiary);display:flex;}
+.crumb-sep{color:var(--colors-neutral-text-color-text-quaternary);display:flex;}
+.crumb-current{font-weight:600;}
+
+.app-main{margin-left:50px;padding-top:105px;}
+/* 固定版面：頂部工具列以上 sticky，左右兩欄各自捲動 */
+.inv-page{padding:0;height:calc(100vh - 105px);display:flex;flex-direction:column;overflow:hidden;}
+
+/* ---------- page header (full-width white bands, border-b #f0f0f0) ---------- */
+.ph-title-row{display:flex;align-items:center;gap:16px;padding:24px 24px 12px;background:#fff;}
+.ph-title-row .back{cursor:pointer;display:flex;color:var(--colors-neutral-text-color-text);}
+.ph-title{font-size:20px;line-height:28px;font-weight:600;color:#000;}
+.ph-scheme-row{display:flex;flex-wrap:wrap;gap:8px 0;align-items:center;justify-content:space-between;
+  padding:8px 16px;background:#fff;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
+.ph-scheme{display:flex;align-items:center;gap:4px;height:32px;}
+.ph-scheme .lbl{color:var(--colors-neutral-text-color-text);}
+.ph-scheme .colon{padding:0 8px 0 2px;color:var(--colors-neutral-text-color-text);}
+.scheme-link{display:flex;align-items:center;gap:8px;height:32px;padding:0 15px;border-radius:var(--border-radius);
+  color:var(--colors-base-blue-6);cursor:pointer;}
+
+/* filter row */
+.filter-row{display:flex;align-items:center;gap:8px;padding:8px 16px 9px;min-height:48px;background:#fff;cursor:pointer;
+  border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
+.filter-row:not(.expanded):hover{background:var(--colors-base-blue-1);}
+.filter-row.expanded{cursor:default;}
+.filter-row.expanded .flt-expand{color:var(--colors-neutral-text-color-text-tertiary);}  /* 展開時 header 不可點收合，只能靠 套用/取消 */
+.filter-row .flt-label{display:flex;align-items:center;gap:4px;color:#000;white-space:nowrap;}
+/* 收合篩選列：各維度/場次的範圍 chip + 符合數 */
+.flt-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0;}
+/* 依設計稿 3672:694940：chip 底 fillQuaternary(0.02)+1px #d9d9d9 邊框、12px、label 0.45、值 Semibold 深色 */
+.scope-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.04);border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius-sm);padding:2px 8px;font-size:14px;line-height:22px;white-space:nowrap;}
+.scope-chip .sc-k{color:var(--colors-neutral-text-color-text-tertiary);font-weight:400;}
+.scope-chip .sc-v{color:var(--colors-neutral-text-color-text);font-weight:600;}
+.flt-count{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-tertiary);white-space:nowrap;}
+.flt-count b{color:var(--colors-neutral-text-color-text);font-weight:600;}
+/* 已選擇的 SKU tag：依設計稿 3549-143396/143310＝灰色 Tag/Basic（非藍 pill） */
+.flt-tag{display:inline-flex;align-items:center;border:none;
+  background:var(--colors-neutral-fill-color-fill-secondary);color:var(--colors-neutral-text-color-text);border-radius:var(--border-radius-sm);padding:1px 8px;
+  font-size:14px;line-height:20px;white-space:nowrap;}
+.flt-more{color:#000;white-space:nowrap;}
+/* 調整＝Button/Basic：px 7（marginXS 氣口）、調整↔chevron gap 8，避免與「N 個場次」擠在一起 */
+.flt-expand{margin-left:auto;color:var(--colors-base-blue-6);display:inline-flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;padding:0 7px;}
+/* SKU 維度篩選 inline 面板（依 Figma 3549:143394）*/
+/* hug 內容(height auto)；上限=cal-col 高 − SKU bar(48px)=可用高度。短內容→hug、footer 緊接內容、月曆顯示在下方；內容超過視窗→cap 到視窗底、fp-body 內部捲動、footer 釘在視窗底(月曆被推出 cal-col 底、由 overflow:hidden 切掉) */
+/* 面板＝覆蓋式 dropdown：絕對定位貼在篩選列正下方、全寬，蓋在壓暗的月曆上；月曆不再被往下推/壓縮 */
+.filter-panel{position:absolute;top:100%;left:0;right:0;min-height:0;max-height:calc(100vh - 300px);display:flex;flex-direction:column;background:#f5f5f5;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);box-shadow:0 2px 8px rgba(0,0,0,.08);}  /* 陰影調淡：覆蓋在深色遮罩上本就不需重陰影，輕一點更自然 */
+.fp-body{flex:1;min-height:0;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:16px;}
+.fp-search{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.fp-search-box{display:flex;align-items:center;gap:4px;font-size:14px;line-height:22px;color:#000;}
+.fp-links{display:flex;gap:8px;}
+.fp-links .link{color:var(--colors-base-blue-6);cursor:pointer;padding:0 7px;}
+.fp-links .link.dark{color:var(--colors-neutral-text-color-text);}
+.fp-dim{background:#fff;border:1px solid var(--colors-neutral-border-color-border-secondary);border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.fp-dim-t{font-size:12px;line-height:20px;color:#000;}
+.fp-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.fp-chip{background:rgba(0,0,0,.02);border:1px solid var(--colors-neutral-border-color-border);border-radius:20px;padding:4px 12px;font-size:14px;line-height:20px;cursor:pointer;color:var(--colors-neutral-text-color-text);}
+.fp-chip.on{background:var(--colors-base-blue-6);border-color:transparent;color:#fff;}
+/* 展開：單一白卡、每維度一列（label 左 + chips 右），虛線分隔（依設計稿 3671-694286）*/
+.fp-card{background:#fff;border-radius:var(--border-radius-lg);padding:0 16px;}
+.fdim-row{display:flex;align-items:center;gap:16px;padding:10px 0;border-top:1px dashed rgba(0,0,0,.06);}
+.fdim-row:first-child{border-top:none;}
+.fdim-label{flex-shrink:0;width:100px;font-size:12px;line-height:20px;color:var(--colors-neutral-text-color-text);}
+.fdim-chips{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0;}
+.fp-skucard{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;}
+.fp-skucard .link{color:var(--colors-base-blue-6);cursor:pointer;}
+.fp-sku-view{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;}
+.fp-sku-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.panel-sec.sess-bare{margin-bottom:0;width:364px;max-width:100%;}
+.req{color:#E65F50;margin-right:2px;font-family:SimSun,sans-serif;line-height:1;}
+.fp-selected{background:#fff;border:1px solid var(--colors-base-blue-6);border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:12px;}
+.fp-selected.error{border-color:#E65F50;}
+.fp-sel-hint{font-size:12px;line-height:20px;color:#E65F50;}
+.fp-sel-t{display:flex;align-items:center;gap:4px;font-size:14px;line-height:22px;color:#000;}
+.fp-sel-t .icon{color:var(--colors-base-blue-6);}
+.fp-sel-chips{display:flex;flex-wrap:wrap;gap:8px;}
+.fp-sel-chip{display:inline-flex;align-items:center;border:none;background:var(--colors-neutral-fill-color-fill-tertiary);color:var(--colors-neutral-text-color-text);border-radius:var(--border-radius-sm);padding:1px 8px;font-size:12px;line-height:20px;}
+.fp-foot{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;
+  border-top:1px solid var(--colors-neutral-border-color-border-secondary);background:#fff;}
+.fp-reset{cursor:pointer;}
+.fp-foot .link{color:var(--colors-neutral-text-color-text);cursor:pointer;padding:0 15px;}
+.fp-foot-btns{display:flex;gap:8px;}
+.fp-foot-right{display:flex;align-items:center;gap:16px;}
+
+/* calendar toolbar */
+.cal-toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px 9px 8px;background:#fff;
+  border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
+.cal-nav{display:flex;align-items:center;}
+.cal-nav .navbtn{cursor:pointer;color:var(--colors-neutral-text-color-text);display:flex;align-items:center;justify-content:center;width:32px;height:32px;}
+.cal-month{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;font-size:16px;line-height:24px;font-weight:600;color:var(--colors-neutral-text-color-text);cursor:pointer;border-radius:6px;}
+.cal-month:hover,.cal-month.open{background:rgba(0,0,0,.04);}
+.cal-month-wrap{position:relative;}
+.month-menu-overlay{position:fixed;inset:0;z-index:50;}
+.month-menu{position:absolute;top:38px;left:0;z-index:51;width:280px;background:#fff;border:1px solid var(--colors-neutral-border-color-border-secondary);border-radius:var(--border-radius-lg);box-shadow:0 6px 16px rgba(0,0,0,.12);overflow:hidden;}
+.mm-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
+.mm-head .mm-year{flex:1;text-align:center;font-size:14px;font-weight:600;color:var(--colors-neutral-text-color-text);}
+.mm-nav{display:flex;align-items:center;justify-content:center;width:24px;height:24px;cursor:pointer;color:var(--colors-neutral-text-color-text-tertiary);border-radius:6px;}
+.mm-nav:hover{background:rgba(0,0,0,.04);color:var(--colors-neutral-text-color-text);}
+.mm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px;}
+.mm-cell{display:flex;align-items:center;justify-content:center;height:36px;border-radius:6px;font-size:14px;color:var(--colors-neutral-text-color-text);cursor:pointer;}
+.mm-cell:not(.disabled):not(.sel):hover{background:rgba(0,0,0,.04);}
+.mm-cell.sel{background:var(--colors-base-blue-6);color:#fff;}
+.mm-cell.disabled{color:var(--colors-neutral-text-color-text-quaternary);cursor:not-allowed;}
+.cal-badge{display:inline-flex;align-items:center;gap:4px;background:var(--colors-base-geekblue-1);color:var(--colors-base-geekblue-7);
+  border-radius:var(--border-radius-sm);padding:4px 8px;font-size:12px;line-height:20px;}
+.tb-spacer{flex:1;}
+.btn-today{display:inline-flex;align-items:center;height:24px;padding:0 7px;background:#fff;
+  border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius-sm);
+  box-shadow:0 2px 0 rgba(0,0,0,.02);font-size:14px;color:var(--colors-neutral-text-color-text);cursor:pointer;}
+.seg{display:flex;align-items:center;gap:0;background:#f5f5f5;border-radius:9999px;padding:2px;height:32px;}
+.seg span{display:flex;align-items:center;padding:0 12px;height:100%;border-radius:9999px;font-size:14px;line-height:22px;
+  color:var(--colors-neutral-text-color-text-secondary);cursor:pointer;}
+.seg span.active{background:#fff;color:var(--colors-neutral-text-color-text);
+  box-shadow:0 1px 2px rgba(0,0,0,.03),0 1px 6px -1px rgba(0,0,0,.02),0 2px 4px rgba(0,0,0,.02);}
+
+/* ---------- body: calendar + panel ---------- */
+.inv-body{flex:1;min-height:0;display:flex;flex-direction:column;background:#e7ecf3;overflow:hidden;}
+.filter-area{flex-shrink:0;background:#fff;position:relative;z-index:40;}  /* 篩選列：全寬；position:relative 當展開面板的定位錨點，z-index:40 抬到下方 grid 遮罩(30)之上 */
+.inv-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 520px;grid-template-rows:minmax(0,1fr);gap:0;position:relative;}  /* position:relative 常駐：讓遮罩 inset:0 的定位基準穩定（收合時若才拿掉，遮罩淡出會跳位＝閃一下）*/
+/* 篩選展開中：下方月曆+panel 鎖住，蓋深色遮罩（colorBgMask rgba(0,0,0,.45)）——依設計稿 3549-143310，modal 式 scrim 把下方區域壓暗、聚焦上方篩選，回去靠 套用/取消 */
+.inv-grid.locked{pointer-events:none;}  /* 覆蓋式：grid 維持原尺寸、只被遮罩壓暗＋鎖定互動（面板浮在上面，不再壓縮月曆） */
+/* 篩選展開時的深色遮罩（colorBgMask rgba(0,0,0,.45)，依設計稿 3549-143310）：實體 overlay、z-index 高於月曆 sticky tabs(5)/cell，穩定蓋在最上層 */
+.inv-grid .lock-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:30;}
+/* 篩選面板/遮罩：暫時拿掉開合動畫，直接出現/消失（排查閃動是否來自動畫本身） */
+/* 批次編輯開啟時，下方各 SKU 清單 disabled（opacity 50% + 不可互動，依設計稿 3549-227580） */
+.sess-list.ro-locked{opacity:.5;pointer-events:none;}
+/* 左欄：SKU 篩選 + 工具列（固定）+ 月曆（捲動）。這三者只在左欄 */
+.cal-col{display:flex;flex-direction:column;min-width:0;min-height:0;background:#e7ecf3;}
+.cal-col .filter-row,.cal-col .cal-toolbar{flex-shrink:0;}
+
+/* calendar: rounded month cards (own scroll container) */
+.cal-area{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;position:relative;}
+.month-card{background:#fff;border:1px solid var(--colors-neutral-border-color-border-secondary);
+  border-radius:var(--border-radius-lg);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03);flex-shrink:0;}
+.month-label{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);margin-top:8px;flex-shrink:0;}
+.cal-weekhead,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);column-gap:8px;}
+.cal-weekhead > div{padding:12px 16px;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);}
+.cal-cell{min-height:140px;border-top:2px solid rgba(0,0,0,.06);padding:12px 16px;gap:4px;
+  display:flex;flex-direction:column;cursor:pointer;position:relative;transition:background .12s;}
+.cal-cell.weekend{background:#fafafa;}
+.cal-cell.empty{cursor:default;}
+.cal-cell.display{cursor:default;}
+.cal-cell.disabled{cursor:not-allowed;}
+.cal-cell:not(.empty):not(.disabled):not(.display):not(.selected):hover{background:rgba(0,0,0,.04);}
+.cal-cell.today{border-top:2px solid var(--colors-base-blue-6);}
+/* 選取：每個選中日各自獨立的圓角 chip；chip 在格內上下內縮 4px → 上下相鄰 chip 之間有 8px 間隙（左右有 8px 欄距），不會黏在一起 */
+.cal-cell.selected::before{content:'';position:absolute;top:4px;bottom:4px;left:0;right:0;background:var(--colors-base-blue-1);border:1px solid var(--colors-base-blue-6);border-radius:var(--border-radius-lg);}
+.cal-cell.selected > *:not(.jit-tip){position:relative;z-index:1;}  /* 排除浮動氣泡：否則它被強制 relative→回到流內→撐高格子 */
+.cal-daynum{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);}
+.cal-cell.selected .cal-daynum{color:var(--colors-base-blue-6);font-weight:600;}
+/* 全日下架（設計稿 3659-677509 Non-current）：整格停用感＝灰底 + 日期刪除線淡化 + 數字 chip 降為灰（放在 selected 規則後，alloff 的日期樣式優先於 selected 的藍字） */
+.cal-cell.alloff{background:var(--colors-neutral-fill-color-fill-tertiary);}
+.cal-cell.alloff .cal-daynum{text-decoration:line-through;color:var(--colors-neutral-text-color-text-disabled);font-weight:400;}
+.cal-cell.alloff .cal-stock .num{background:var(--colors-neutral-fill-color-fill-tertiary);color:var(--colors-neutral-text-color-text-disabled);}
+.cal-badges{display:flex;flex-direction:column;gap:4px;margin-top:2px;}
+.cal-badge-dot{display:flex;align-items:center;gap:6px;font-size:12px;line-height:20px;white-space:nowrap;}
+.cal-badge-dot .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.badge-warn{color:var(--colors-neutral-text-color-text);} .badge-warn .dot{background:var(--colors-base-orange-6);}
+.badge-off{color:var(--colors-neutral-text-color-text);} .badge-off .dot{background:var(--colors-neutral-text-color-text-quaternary);}
+/* 部分下架：橘點（與場次 header 一致）；全日下架維持灰點 badge-off */
+.badge-partial{color:var(--colors-neutral-text-color-text);} .badge-partial .dot{background:var(--status-partial-offline-dot);}
+/* just-in-time 多選提示氣泡：貼在剛點的日期格、指向日期數字；jittip 把該格抬到相鄰格之上避免被蓋 */
+.cal-cell.jittip{z-index:25;}
+/* 浮動小卡（依設計稿 3717-803203）：貼在「整格下方」浮出、不壓格子內容；白底無框、只靠分層陰影；箭頭指向該格。靠右欄→靠右、最後一排→往上翻 */
+.jit-tip{position:absolute;top:calc(100% + 6px);left:6px;z-index:25;display:flex;align-items:flex-start;gap:8px;width:232px;background:#fff;box-shadow:0 6px 8px rgba(0,0,0,.08),0 3px 3px rgba(0,0,0,.12),0 9px 14px rgba(0,0,0,.05);border-radius:6px;padding:8px;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);cursor:default;animation:jitIn .2s cubic-bezier(.22,.61,.36,1);}
+.jit-tip.right{left:auto;right:6px;}
+.jit-tip.up{top:auto;bottom:calc(100% + 6px);}
+.jit-tip .jt-ic{color:var(--colors-base-blue-6);display:flex;flex-shrink:0;margin-top:1px;}
+.jit-tip .jt-tx{flex:1;min-width:0;}
+.jit-tip .jt-l{display:block;}
+.jit-tip .jt-tx b{font-weight:400;color:var(--colors-base-blue-6);}
+.jit-tip::before{content:'';position:absolute;top:-5px;left:24px;width:10px;height:10px;background:#fff;transform:rotate(45deg);box-shadow:-2px -2px 5px rgba(0,0,0,.06);}
+.jit-tip.right::before{left:auto;right:24px;}
+.jit-tip.up::before{top:auto;bottom:-5px;box-shadow:2px 2px 5px rgba(0,0,0,.06);}
+@keyframes jitIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+/* 期間標示（season，預設隱藏；showSeason 翻 true 顯示）*/
+.cal-season{align-self:flex-start;display:inline-flex;background:var(--colors-base-geekblue-1);color:var(--colors-base-geekblue-7);
+  border-radius:var(--border-radius-sm);padding:0 6px;font-size:12px;line-height:18px;margin-top:2px;}
+/* 篩到單一 SKU 時月曆顯示的數字 */
+.cal-stock{margin-top:auto;}
+.cal-stock .num{display:inline-flex;background:var(--colors-base-geekblue-1);color:var(--colors-base-geekblue-7);border-radius:var(--border-radius-sm);padding:2px 8px;font-size:14px;line-height:22px;}
+
+/* ---------- right panel ---------- */
+.panel{background:#fff;border-left:1px solid var(--colors-neutral-border-color-border-secondary);
+  padding:0 20px 20px;min-height:0;overflow-y:auto;}
+.panel h3{margin:0;padding:20px 0 0;font-size:20px;line-height:28px;font-weight:600;color:#000;}
+.panel-tabs{position:sticky;top:0;z-index:5;background:#fff;display:flex;margin:0 -20px 24px;padding:16px 20px 16px;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
+.panel-tabs.flush{border-bottom:0;margin-bottom:16px;}  /* 有 chips 時：tabs 與 chips 間不要線 */
+.panel-tabs button{flex:1;height:40px;cursor:pointer;font-size:16px;line-height:24px;background:#fff;
+  color:var(--colors-neutral-text-color-text);border:1px solid var(--colors-neutral-border-color-border);
+  display:flex;align-items:center;justify-content:center;gap:8px;}
+.panel-tabs button:first-child{border-radius:6px 0 0 6px;border-right-width:0;}
+.panel-tabs button:last-child{border-radius:0 6px 6px 0;}
+.panel-tabs button{transition:background .2s ease,color .2s ease,border-color .2s ease;}
+.panel-tabs button.active{background:var(--colors-base-blue-7);color:#fff;border-color:var(--colors-base-blue-7);}
+.tab-pane{animation:paneIn .26s cubic-bezier(.22,.61,.36,1);}  /* ease-out：起步快、尾段減速，點日期時右側內容「跟上來」的回饋更明確 */
+@keyframes paneIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+/* 錨點標籤列：只在已捲過該欄位時出現（平時 0 高），點一下捲回該欄位並閃一下 */
+/* 依設計稿 3636-643301 chips：colorPrimary(#44a0f4) 邊框+字、底 blue-1、pill、12px、icon 16、chip 間距 8、距 tabs 16（無分隔線） */
+.panel-anchors{position:sticky;z-index:4;background:#fff;display:flex;gap:8px;flex-wrap:wrap;margin:0 -20px 16px;padding:0 20px 16px;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
+.panel-anchors.hide{display:none;}
+.anchor-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border:1px solid var(--colors-base-blue-6);background:var(--colors-base-blue-1);color:var(--colors-base-blue-6);border-radius:999px;font-size:12px;line-height:20px;cursor:pointer;transition:background .15s ease;}
+.anchor-chip:hover{background:var(--colors-base-blue-3);}
+.anchor-chip .ac-ic{display:flex;}
+.anchor-flash{animation:anchorFlash 1.3s ease;}  /* 不強制圓角，沿用目標元素(.date-tags radius 6)自身圓角，讓 highlight 外框貼合灰色區塊 */
+@keyframes anchorFlash{0%,55%{box-shadow:0 0 0 2px var(--colors-base-blue-6);}100%{box-shadow:0 0 0 2px transparent;}}
+.filter-banner{display:flex;align-items:center;justify-content:space-between;background:var(--colors-base-blue-1);
+  border:1px solid var(--colors-base-blue-3);border-radius:var(--border-radius-lg);padding:8px 12px;margin-bottom:16px;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);}
+.filter-banner .fb-l{display:flex;align-items:center;gap:8px;}
+.filter-banner .fb-l .fic{display:flex;color:var(--colors-base-blue-6);flex-shrink:0;}
+.filter-banner .fb-r{display:flex;gap:12px;flex-shrink:0;}
+.filter-banner .link{color:var(--colors-base-blue-6);cursor:pointer;}
+.panel-sec{margin-bottom:24px;}
+.panel-sec.date-sec{margin:0 -20px 24px;padding:0 20px 24px;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
+.panel-label{display:flex;align-items:center;font-size:14px;line-height:22px;font-weight:600;color:var(--colors-neutral-text-color-text);margin-bottom:8px;}
+.panel-label .link{color:var(--colors-base-blue-6);cursor:pointer;font-weight:400;margin-left:auto;}
+.date-box{border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius);
+  padding:7px 11px;display:flex;align-items:center;justify-content:space-between;color:var(--colors-neutral-text-color-text);background:#fff;}
+.date-box.empty{color:var(--colors-neutral-text-color-text-quaternary);}
+.date-field-ro{display:flex;align-items:center;justify-content:space-between;height:36px;padding:4px 11px;border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius);background:var(--colors-neutral-fill-color-fill-tertiary);color:var(--colors-neutral-text-color-text-quaternary);font-size:14px;line-height:22px;}
+.date-field-ro .suf{display:flex;color:var(--colors-neutral-text-color-text-tertiary);}
+.date-hint{font-size:12px;color:var(--colors-neutral-text-color-text-tertiary);margin-top:5px;}
+/* 平日/週末 Segmented（依設計稿 3717-801948 token）：track #f5f5f5、trackPadding 2、radius 6、item radius 4、h32、選中白底+淡陰影、字 0.65→0.88 */
+.date-seg{display:flex;gap:0;margin-top:8px;height:32px;padding:2px;background:#f5f5f5;border-radius:6px;}
+.date-seg span{flex:1;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:22px;color:rgba(0,0,0,.65);border-radius:4px;cursor:pointer;transition:color .15s ease,background .15s ease;white-space:nowrap;user-select:none;}
+.date-seg span:hover{color:var(--colors-neutral-text-color-text);}
+.date-seg span.active{background:#fff;color:var(--colors-neutral-text-color-text);box-shadow:0 1px 2px rgba(0,0,0,.03),0 1px 6px -1px rgba(0,0,0,.02),0 2px 4px rgba(0,0,0,.02);}
+.date-tags{background:rgba(0,0,0,.02);border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius);padding:8px;}
+.date-tags .picked{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-secondary);margin-bottom:8px;}
+.date-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.02);border:1px solid var(--colors-neutral-border-color-border);
+  color:var(--colors-neutral-text-color-text);border-radius:var(--border-radius-sm);padding:1px 8px;font-size:12px;line-height:20px;margin:0 8px 8px 0;}
+.date-tag .x{cursor:pointer;display:flex;color:var(--colors-neutral-text-color-text-tertiary);} .date-tag .x:hover{color:var(--colors-neutral-text-color-text);}
+
+.field-input{width:100%;border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius);
+  padding:7px 11px;font-size:14px;color:var(--colors-neutral-text-color-text);display:flex;align-items:center;gap:8px;background:#fff;}
+.field-input.placeholder{color:var(--colors-neutral-text-color-text-quaternary);}
+.field-input input{border:none;outline:none;flex:1;font-size:14px;color:inherit;background:transparent;}
+
+.sku-box{border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius);overflow:hidden;background:#fff;}
+.sku-search-cell{padding:8px;border-bottom:1px solid rgba(0,0,0,.06);}
+.sku-search{position:relative;display:block;}
+.sku-search input{width:100%;border:none;border-radius:var(--border-radius);height:32px;
+  padding:4px 11px 4px 31px;font-size:14px;line-height:22px;outline:none;background:rgba(0,0,0,.04);}
+.sku-search .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--colors-neutral-text-color-text-tertiary);display:flex;}
+.sku-rows{max-height:280px;overflow-y:auto;}
+.sku-opt{display:flex;align-items:center;gap:8px;padding:8px 12px 9px;border-bottom:1px solid rgba(0,0,0,.06);font-size:14px;line-height:22px;color:#000;}
+.sku-empty{padding:24px 12px;text-align:center;color:var(--colors-neutral-text-color-text-tertiary);font-size:13px;}
+.sku-other{border-top:1px solid rgba(0,0,0,.06);}
+.sku-other-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-secondary);cursor:pointer;}
+.sku-other-row{justify-content:space-between;background:rgba(0,0,0,.02);}
+.sku-other-row .x{cursor:pointer;color:var(--colors-neutral-text-color-text-tertiary);display:flex;}
+.sku-other-row .x:hover{color:var(--colors-neutral-text-color-text);}
+.sku-caption{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-tertiary);margin-top:4px;}
+
+.qty-radios{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;}
+.qty-radios .ant-radio-wrapper{white-space:nowrap;margin-inline-end:0;}
+.panel-actions{display:flex;gap:8px;}
+.panel-actions .ant-btn{flex:1;}
+
+/* 當日庫存 session groups */
+.day-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.day-head .title{font-size:14px;line-height:22px;font-weight:600;color:var(--colors-neutral-text-color-text);}
+.day-head .link{color:var(--colors-base-blue-6);cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px;}
+.day-head .link.cancel{color:var(--colors-neutral-text-color-text);}
+/* 關閉銷售提示 banner（依設計稿 3697-676891 / 3706-731857）＝AntD info banner：全出血灰底 #f5f5f5、方角無框、灰 InfoCircle icon、文字 0.88 / 14px，無連結 */
+/* margin-top:-24px 抵銷日期區(.date-sec)的 margin-bottom:24px，讓 banner 緊貼日期區塊的分隔線下方（無間隔，依設計稿） */
+.day-notice{display:flex;align-items:center;gap:8px;background:#f5f5f5;margin:-24px -20px 16px;padding:8px 20px;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);}
+.day-notice .dn-ic{color:var(--colors-neutral-text-color-text-tertiary);display:flex;flex-shrink:0;}
+.day-notice .dn-tx{flex:1;min-width:0;}
+.sess-group{border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius-lg);margin-bottom:16px;overflow:hidden;}
+.sess-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#fff;border-bottom:1px solid var(--colors-neutral-border-color-border);cursor:pointer;}
+.sess-head .lbl{display:flex;align-items:center;gap:8px;font-size:14px;line-height:22px;font-weight:600;color:#000;cursor:pointer;flex:1;}  /* 場次＝群組標題，用 Semibold 跟底下 SKU 列(400)拉開層級 */
+.sess-head .sess-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+/* 場次「部分下架」標籤：沿用月曆 badge-off 的中性灰點＋文案，標示 header switch 未勾但底下非全下架 */
+.sess-partial{display:inline-flex;align-items:center;gap:6px;font-size:12px;line-height:20px;color:var(--colors-neutral-text-color-text-secondary);white-space:nowrap;}
+.sess-partial .dot{width:6px;height:6px;border-radius:50%;background:var(--status-partial-offline-dot);flex-shrink:0;}
+.sess-body{padding:14px;display:flex;flex-direction:column;gap:10px;background:rgba(0,0,0,.04);}
+.sku-shared-box{background:rgba(0,0,0,.02);border:1px solid var(--colors-neutral-border-color-border-secondary);border-radius:var(--border-radius);padding:8px 12px;}
+.sku-caption-desc{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-tertiary);margin-top:2px;}
+.sess-range{display:flex;align-items:center;gap:8px;}
+.sess-range .arr{color:var(--colors-neutral-text-color-text-tertiary);flex-shrink:0;}
+.sess-group.nohead{border:none;border-radius:0;overflow:visible;}
+.sess-group.nohead .sess-body{padding:0;background:transparent;}
+.sku-card{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius);padding:14px 16px;background:#fff;}
+.sku-card .nm{font-size:14px;line-height:22px;color:#000;}
+/* 下架中標籤（依設計稿 3702-726185）＝名稱右側、鉛筆左側的描邊灰 Tag：bg 0.02、1px #d9d9d9、radius 4、padding 1/8、12px/20、不換行 */
+.sku-card .sku-info{flex:1;min-width:0;}
+.sku-card .offtag{flex-shrink:0;padding:1px 8px;font-size:12px;line-height:20px;border-radius:var(--border-radius-sm);background:rgba(0,0,0,.02);border:1px solid var(--colors-neutral-border-color-border);color:var(--colors-neutral-text-color-text);white-space:nowrap;}
+.sku-card .av{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-secondary);margin-top:2px;}
+.sku-card .av b{color:var(--colors-base-green-6);font-weight:600;}
+.sku-card .av-delta{margin-left:8px;font-size:12px;color:var(--colors-neutral-text-color-text-tertiary);text-decoration:line-through;}
+.sku-card.flash{animation:cardFlash 1.8s ease;}
+@keyframes cardFlash{0%{box-shadow:0 0 0 2px var(--colors-base-green-6);background:var(--colors-base-green-1);}60%{box-shadow:0 0 0 2px var(--colors-base-green-6);background:var(--colors-base-green-1);}100%{box-shadow:none;background:#fff;}}
+/* 多日批次套用回饋：綠色圓角 chip（與選取 chip 同形狀、內縮）蓋在藍色選取上，1.8s 淡出回到藍色 */
+.cal-cell.flashcell::after{content:'';position:absolute;top:4px;bottom:4px;left:0;right:0;border-radius:var(--border-radius-lg);background:var(--colors-base-green-1);border:1px solid var(--colors-base-green-6);z-index:0;animation:chipFlash 1.8s ease forwards;}
+.cal-cell.flashcell > *:not(.jit-tip){position:relative;z-index:1;}
+@keyframes chipFlash{0%,55%{opacity:1;}100%{opacity:0;}}
+.sku-card .edit{color:var(--colors-neutral-text-color-text);cursor:pointer;background:#fff;border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius-sm);box-shadow:0 2px 0 rgba(0,0,0,.02);width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sku-card .edit:hover{color:var(--colors-base-blue-6);border-color:var(--colors-base-blue-4);}
+.sku-card.editing{flex-direction:column;align-items:stretch;gap:8px;}
+.edit-full{display:flex;flex-direction:column;gap:8px;width:100%;}
+.edit-row{display:flex;align-items:center;gap:8px;}
+.edit-row .av-label{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-secondary);flex-shrink:0;}
+.edit-row .ant-input-number{width:84px;}
+.edit-row .ant-btn{flex-shrink:0;}
+
+/* 無日期時：批次設定「預覽」（disabled，選日期後啟用）*/
+.bp-hint{display:flex;align-items:center;gap:8px;background:var(--colors-base-blue-1);border:1px solid var(--colors-base-blue-3);border-radius:var(--border-radius-lg);padding:8px 12px;margin-bottom:16px;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);}
+.bp-hint .ic{display:flex;color:var(--colors-base-blue-6);flex-shrink:0;}
+/* 依設計稿 3667-687154：整塊統一灰（文字/label/紅星/全選都用 colorTextDisabled 0.25），控件為真 disabled */
+/* 調整範圍摘要（取代 panel 的 SKU/場次選擇）*/
+/* 範圍列：依設計稿 3684-639932＝fillTertiary(0.04) 底、無框、padding 12、圓角 8、flex-col gap4；「範圍：」tertiary 置頂。
+   4 變體：獨立+場次／獨立＝值行(數字/場次 Semibold)＋「調整」藍連結置右；共用+場次＝「全部 SKU（共用）」＋場次行帶「調整場次」藍底線連結；共用＝僅「全部 SKU（共用）」無連結 */
+/* 範圍 scope-bar：依設計稿 3706-735064＝fillQuaternary(0.02) 底 + 1px #d9d9d9 邊框 + radius 8 + padding 12（原本是 fillTertiary 0.04、無框）*/
+.scope-bar{display:flex;flex-direction:column;gap:4px;background:var(--colors-neutral-fill-color-fill-quaternary);border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius-lg);padding:12px;margin-bottom:24px;}
+.scope-bar .sb-label{color:var(--colors-neutral-text-color-text-tertiary);font-size:14px;line-height:22px;}
+.scope-bar .sb-row{display:flex;align-items:center;gap:8px;}
+.scope-bar .sb-text{flex:1;min-width:0;}
+.scope-bar .sb-text,.scope-bar .sb-line{color:var(--colors-neutral-text-color-text);font-size:14px;line-height:22px;}
+.scope-bar .sb-text b,.scope-bar .sb-line b{font-weight:600;}
+.scope-bar .sb-edit{color:var(--colors-base-blue-6);cursor:pointer;flex-shrink:0;font-size:14px;line-height:22px;}
+.scope-bar .sb-row .sb-edit{padding:0 7px;}
+.scope-bar .sb-u{text-decoration:underline;}
+.batch-preview{pointer-events:none;user-select:none;color:var(--colors-neutral-text-color-text-quaternary);}
+.batch-preview .panel-label,.batch-preview .req,.batch-preview .link,.batch-preview .sku-opt,.batch-preview .fp-dim-t{color:var(--colors-neutral-text-color-text-quaternary) !important;}
+/* 場次時間：依設計稿＝單一 disabled range 框（已帶值 + 時鐘 icon）*/
+.prev-timerange{display:flex;align-items:center;gap:8px;height:32px;padding:4px 11px;border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius);background:var(--colors-neutral-fill-color-fill-tertiary);}
+.prev-timerange .ptr-v{flex:1;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-quaternary);}
+.prev-timerange .ptr-arr,.prev-timerange .ptr-ic{color:var(--colors-neutral-text-color-text-quaternary);display:flex;flex-shrink:0;}
+/* info / empty cards in panel */
+.info-card{border:1px solid var(--colors-base-blue-3);background:var(--colors-base-blue-1);border-radius:var(--border-radius);padding:14px;display:flex;gap:10px;}
+.info-card .ic{color:var(--colors-base-blue-6);flex-shrink:0;display:flex;margin-top:2px;}
+.info-card .tt{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:600;margin-bottom:6px;}
+.info-card .desc{font-size:13px;color:var(--colors-neutral-text-color-text-secondary);line-height:1.6;}
+.plain-card{border:1px solid #eef0f3;border-radius:var(--border-radius);padding:16px;}
+.plain-card .tt{font-weight:600;margin-bottom:6px;}
+.plain-card .desc{font-size:13px;color:var(--colors-neutral-text-color-text-tertiary);}
+
+.batch-box{border:1px solid var(--colors-neutral-border-color-border-secondary);border-radius:var(--border-radius-lg);padding:16px;margin-bottom:12px;background:rgba(0,0,0,.06);}
+/* 空狀態 依設計稿 3457-205192 / 3634-597862：py 48、icon 圈 40(icon 20)、title 14/600、subtitle 14/tertiary、提示盒 fillTertiary(.04)+8px 圓角+16px padding、各行 14/22 */
+.empty-hint{text-align:center;padding:48px 16px;color:var(--colors-neutral-text-color-text-secondary);}
+.empty-hint .eh-ic{display:inline-flex;width:40px;height:40px;align-items:center;justify-content:center;border-radius:999px;background:var(--colors-base-blue-1);color:var(--colors-base-blue-6);margin-bottom:16px;}
+.empty-hint .eh-t{font-size:14px;font-weight:600;color:var(--colors-neutral-text-color-text);margin-bottom:4px;}
+.empty-hint .eh-d{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-tertiary);}
+.eh-methods{list-style:none;margin:16px auto 0;padding:16px;text-align:left;display:inline-block;background:var(--colors-neutral-fill-color-fill-tertiary);border-radius:var(--border-radius-lg);}
+.eh-methods li{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-tertiary);}
+.eh-methods li b{font-weight:600;color:var(--colors-neutral-text-color-text-secondary);}
+.filter-row{cursor:pointer;}
+/* week view（依 Figma 週曆 3549:143663：僅水平 2px 上框、無垂直線、累加總數=geekblue pill）*/
+.week-scroll{overflow-x:auto;background:#fff;border:1px solid var(--colors-neutral-border-color-border-secondary);border-radius:var(--border-radius-lg);box-shadow:0 1px 2px rgba(0,0,0,.03);padding:16px;}
+.week-grid{min-width:880px;}
+.wk-row{display:grid;grid-template-columns:120px repeat(7,minmax(0,1fr));}
+.wk-cell{min-height:72px;padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:14px;line-height:22px;color:#000;border-top:2px solid rgba(0,0,0,.06);}
+/* 表頭列：無邊框、兩行（星期 + 日），50px 高 */
+.wk-headrow .wk-cell{min-height:0;height:50px;border-top:none;gap:4px;padding:0 8px 2px;cursor:pointer;}
+.wk-wd{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);font-weight:400;}
+.wk-dnum{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);font-weight:600;}
+/* SKU 欄（左）：左對齊、可折兩行、sticky、12px */
+.wk-skucol{align-items:flex-start;text-align:left;position:sticky;left:0;background:#fff;z-index:1;
+  font-size:12px;line-height:20px;color:var(--colors-neutral-text-color-text);white-space:normal;word-break:break-word;}
+.wk-headrow .wk-skucol{border-top:none;}
+.wk-total .wk-skucol{font-weight:700;}
+/* 累加總數：geekblue pill */
+.wk-total .wk-cell{align-items:center;}
+.wk-pill{display:inline-flex;background:var(--colors-base-geekblue-1);color:var(--colors-base-geekblue-7);
+  border-radius:var(--border-radius-sm);padding:4px 8px;font-size:14px;line-height:22px;}
+/* weekend：整欄 rgba(0,0,0,.04)（表頭除外）*/
+.wk-cell.wkend{background:rgba(0,0,0,.04);}
+.wk-headrow .wk-cell.wkend{background:transparent;}
+/* 選取日：累加總數格藍上框 + 當欄淡藍（Click 深度編輯態）+ 表頭日藍底線 */
+.wk-cell.sel{background:var(--colors-base-blue-1);}
+.wk-total .wk-cell.sel{border-top-color:var(--colors-base-blue-6);}
+.wk-head.sel{background:transparent;box-shadow:inset 0 -2px 0 var(--colors-base-blue-6);}
+.wk-head.sel .wk-dnum{color:var(--colors-base-blue-6);}
+.wk-click{cursor:pointer;}
+.wk-off{color:var(--colors-neutral-text-color-text-tertiary);}
+.wk-stat.on{color:var(--colors-base-green-6);} .wk-stat.off{color:var(--colors-neutral-text-color-text-tertiary);}
+.wk-tip-overlay .ant-tooltip-inner{color:var(--colors-neutral-text-color-text);padding:10px 12px;box-shadow:0 4px 16px rgba(0,0,0,.12);}
+.wk-tip-h{font-size:13px;color:#000;line-height:20px;}
+.wk-tip-h2{font-size:12px;color:var(--colors-neutral-text-color-text-secondary);line-height:18px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #f0f0f0;}
+.wk-tip-row{display:flex;justify-content:space-between;gap:28px;font-size:13px;color:var(--colors-neutral-text-color-text);padding:2px 0;min-width:180px;}
+.wk-tip-total{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:#000;padding-top:6px;margin-top:4px;border-top:1px solid #f0f0f0;}
+
+/* mode switcher modal */
+.mode-opt{border:1px solid var(--colors-neutral-border-color-border);border-radius:var(--border-radius);padding:12px 14px;margin-bottom:10px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;}
+.mode-opt:hover{border-color:var(--colors-base-blue-4);}
+.mode-opt.sel{border-color:var(--colors-base-blue-6);background:var(--colors-base-blue-1);}
+.mode-opt .mt{font-weight:600;}
+.mode-opt .md{font-size:12px;color:var(--colors-neutral-text-color-text-tertiary);margin-top:3px;line-height:1.5;}
+.mode-summary{margin-top:14px;border:1px solid var(--colors-base-blue-3);background:var(--colors-base-blue-1);border-radius:var(--border-radius-lg);padding:14px 16px;}
+.mode-summary .ms-row{display:flex;gap:12px;padding:6px 0;}
+.mode-summary .ms-k{width:64px;flex-shrink:0;color:var(--colors-neutral-text-color-text-secondary);font-size:13px;}
+.mode-summary .ms-v{font-weight:600;font-size:14px;color:var(--colors-neutral-text-color-text);}
+.mode-summary .ms-d{font-size:12px;color:var(--colors-neutral-text-color-text-tertiary);margin-top:2px;}
+.mode-summary .ms-next{margin-top:10px;padding-top:10px;border-top:1px dashed var(--colors-base-blue-3);}
+.mode-summary .ms-next-t{font-weight:600;font-size:13px;margin-bottom:4px;}
+.mode-summary .ms-next-i{font-size:12px;color:var(--colors-neutral-text-color-text-secondary);line-height:1.8;}
+
+/* ===== 庫存模式設定 wizard ===== */
+.wiz-wrap .ant-modal-content{padding:0;overflow:hidden;}
+.wiz-head{padding:20px 24px 8px;}
+.wiz-title{font-size:20px;line-height:28px;font-weight:600;color:#000;}
+.wiz-sub{padding:8px 24px 16px;border-bottom:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column;gap:16px;}
+.wiz-scheme{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-secondary);}
+.wiz-alert{display:flex;gap:8px;align-items:flex-start;padding:8px 12px;font-size:14px;line-height:22px;}
+.wiz-alert .wa-ic{flex-shrink:0;display:flex;margin-top:3px;}
+.wiz-alert ul{margin:0;padding-left:21px;}
+.wiz-alert.warn{background:#fff8e1;color:var(--colors-neutral-text-color-text);}
+.wiz-alert.warn .wa-ic{color:var(--colors-base-orange-6);}
+.wiz-alert.info{background:var(--colors-base-blue-1);color:var(--colors-neutral-text-color-text);}
+.wiz-alert.info .wa-ic{color:var(--colors-base-blue-6);}
+.wiz-alert.ok{background:#f6ffed;color:var(--colors-neutral-text-color-text);}
+.wiz-alert.ok .wa-ic{color:var(--colors-base-green-6);}
+.wiz-body{padding:24px;}
+.wiz-cards{display:flex;gap:12px;}
+.wiz-card{flex:1;min-width:0;border:1px solid var(--colors-neutral-border-color-border);border-radius:8px;padding:24px;cursor:pointer;display:flex;flex-direction:column;gap:12px;background:#fff;transition:all .12s;}
+.wiz-card.sel{border-color:var(--colors-base-blue-6);background:var(--colors-base-blue-1);box-shadow:0 6px 8px rgba(0,0,0,.08),0 3px 3px rgba(0,0,0,.12),0 9px 14px rgba(0,0,0,.05);}
+.wc-top{display:flex;align-items:center;gap:8px;}
+.wc-radio{width:20px;height:20px;border-radius:50%;border:1px solid var(--colors-neutral-border-color-border);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;}
+.wc-radio.on{background:var(--colors-base-blue-6);border-color:var(--colors-base-blue-6);}
+.wc-title{flex:1;font-size:16px;line-height:24px;color:#101828;}
+.wc-badge{font-size:12px;line-height:20px;color:var(--colors-neutral-text-color-text);background:rgba(0,0,0,.02);border:1px solid var(--colors-neutral-border-color-border);border-radius:4px;padding:0 8px;}
+.wc-desc{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text-secondary);}
+.wc-eg{background:#fff;border:1px solid var(--colors-neutral-border-color-border);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:8px;}
+.wc-eg.sel{border-color:var(--colors-base-blue-3);}
+.wc-eg-t{font-size:12px;line-height:20px;color:var(--colors-neutral-text-color-text-secondary);}
+.wc-eg ul{margin:0;padding-left:18px;font-size:12px;line-height:20px;color:var(--colors-neutral-text-color-text-secondary);}
+.wc-eg-s{font-size:12px;line-height:20px;color:var(--colors-neutral-text-color-text-secondary);}
+.wiz-sum{display:flex;gap:12px;}
+.ws-card{flex:1;min-width:0;border:1px solid var(--colors-neutral-border-color-border);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:12px;}
+.ws-h{display:flex;align-items:center;gap:8px;font-size:16px;line-height:24px;color:var(--colors-neutral-text-color-text);}
+.ws-n{width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.06);color:var(--colors-neutral-text-color-text-secondary);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.ws-chip{align-self:flex-start;background:var(--colors-base-blue-1);color:var(--colors-base-blue-7);border:1px solid var(--colors-base-blue-3);border-radius:6px;padding:6px 12px;font-size:14px;}
+.ws-d{font-size:13px;line-height:20px;color:var(--colors-neutral-text-color-text-tertiary);}
+.wiz-next{margin-top:16px;background:var(--colors-base-blue-1);border-radius:8px;padding:16px;}
+.wn-t{font-weight:600;font-size:14px;margin-bottom:6px;}
+.wiz-next ul{margin:0;padding-left:20px;font-size:13px;line-height:1.9;color:var(--colors-neutral-text-color-text-secondary);}
+.wiz-foot{display:flex;justify-content:flex-end;gap:8px;padding:0 24px 20px;}
+
+.icon{display:inline-flex;vertical-align:middle;}
+.icon svg{display:block;}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+ <a-config-provider :auto-insert-space-in-button="false" :theme="scmTheme">
+  <!-- ===== header ===== -->
+  <div class="app-header">
+    <div class="header-logo">kkday<small>SCM</small></div>
+    <div class="header-city"><span>築地市場</span><icon name="chevron-down" :size="14"></icon></div>
+    <div class="header-spacer"></div>
+    <div class="header-icons">
+      <span class="header-icon-btn"><icon name="globe"></icon></span>
+      <span class="header-icon-btn"><icon name="book"></icon></span>
+      <span class="header-icon-btn"><icon name="info"></icon></span>
+      <span class="header-icon-btn"><icon name="smartphone"></icon></span>
+      <span class="header-icon-btn"><icon name="bell"></icon></span>
+    </div>
+    <div class="header-avatar"><span class="avatar-circle">🐻</span>WAN YI LIN</div>
+  </div>
+
+  <!-- ===== global rail ===== -->
+  <div class="global-rail">
+    <div v-for="it in rail" :key="it.k" class="global-rail-icon" :class="{active:it.active}">
+      <icon :name="it.k"></icon>
+    </div>
+  </div>
+
+  <!-- ===== breadcrumb ===== -->
+  <div class="app-breadcrumb">
+    <span class="crumb-icon"><icon name="shopping" :size="14"></icon></span>
+    <span>商品管理</span>
+    <span class="crumb-sep"><icon name="chevron-right" :size="12"></icon></span>
+    <span class="crumb-current">庫存管理</span>
+  </div>
+
+  <!-- ===== main ===== -->
+  <div class="app-main">
+    <div class="inv-page">
+      <div class="ph-title-row">
+        <span class="back"><icon name="arrow-left"></icon></span>
+        <span class="ph-title">{{ prodTitle }}</span>
+      </div>
+
+      <div class="ph-scheme-row">
+        <div class="ph-scheme">
+          <span class="lbl">當前方案</span><span class="colon">:</span>
+          <span class="scheme-link">{{ prodPlan }} <icon name="chevron-down" :size="16"></icon></span>
+        </div>
+        <a-button @click="openSwitcher">更改庫存模式</a-button>
+      </div>
+
+      <div class="inv-body">
+        <!-- 篩選列：全寬，橫跨月曆 + 右側 panel（界定編輯範圍；SKU/場次選擇統一在此，右側 panel 不再選）-->
+        <div class="filter-area">
+          <div class="filter-row" :class="{expanded:fExpanded}" @click="toggleFilter">
+            <span class="flt-label"><icon name="filter" :size="18"></icon> 篩選範圍</span>
+            <div class="flt-chips" v-if="!fExpanded">
+              <span class="scope-chip" v-for="d in dims" :key="d.idx"><span class="sc-k">{{ d.label }}</span><span class="sc-v">{{ scopeDimText[d.idx] }}</span></span>
+              <span class="scope-chip" v-if="!noSess"><span class="sc-k">場次</span><span class="sc-v">{{ scopeSessText }}</span></span>
+            </div>
+            <span class="flt-count" v-if="!fExpanded"><b>{{ visibleSkus.length }}</b> 個 SKU<template v-if="!noSess">、<b>{{ scopeSessions.length }}</b> 個場次</template></span>
+            <span class="flt-expand" v-if="!fExpanded">調整 <icon name="chevron-down" :size="14"></icon></span>
+          </div>
+
+          <div class="filter-panel" v-if="fExpanded">
+            <div class="fp-body">
+              <div class="fp-card">
+                <div class="fdim-row" v-for="d in dims" :key="d.idx">
+                  <span class="fdim-label">{{ d.label }}</span>
+                  <div class="fdim-chips">
+                    <span class="fp-chip" :class="{on:!(fDimsDraft[d.idx]||[]).length}" @click="setDimAll(d.idx)">全部</span>
+                    <span class="fp-chip" :class="{on:(fDimsDraft[d.idx]||[]).includes(v)}" v-for="v in d.values" :key="v" @click="toggleDim(d.idx,v)">{{ v }}</span>
+                  </div>
+                </div>
+                <div class="fdim-row" v-if="!noSess">
+                  <span class="fdim-label">場次</span>
+                  <sess-range bare :options="sessOptions" v-model:from="draftSessFrom" v-model:to="draftSessTo"></sess-range>
+                </div>
+              </div>
+              <div class="fp-card fp-skucard">
+                <span class="fdim-label">符合 SKU</span>
+                <span class="link" v-if="!showScopeSkus" @click="showScopeSkus=true">查看 {{ draftSkus.length }} 個 SKU</span>
+                <div class="fp-sku-view" v-else>
+                  <div class="fp-sku-grid"><span class="fp-sel-chip" v-for="s in draftSkus" :key="s.id">{{ s.name }}</span></div>
+                  <span class="link" @click="showScopeSkus=false">隱藏</span>
+                </div>
+              </div>
+            </div>
+            <div class="fp-foot">
+              <span class="link dark fp-reset" @click="resetFilter">重設篩選</span>
+              <div class="fp-foot-right">
+                <!-- 結果數＝草稿即時預覽（依設計稿 3625-550436）：數字 Semibold 深色、單位 tertiary -->
+                <span class="flt-count"><b>{{ draftSkus.length }}</b> 個 SKU<template v-if="!noSess">、<b>{{ draftSessions.length }}</b> 個場次</template></span>
+                <div class="fp-foot-btns"><a-button @click="cancelFilter">取消</a-button><a-button type="primary" @click="applyFilter">套用篩選</a-button></div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /filter-area -->
+
+        <div class="inv-grid" :class="{locked:fExpanded}">
+        <div class="cal-col">
+          <div class="cal-toolbar">
+            <div class="cal-nav">
+              <span class="navbtn" @click="prevMonth" title="上個月"><icon name="chevrons-left" :size="16"></icon></span>
+              <div class="cal-month-wrap">
+                <span class="cal-month" :class="{open:monthMenuOpen}" @click="toggleMonthMenu">{{ monthLabel }} <icon name="chevron-down" :size="16"></icon></span>
+                <div class="month-menu-overlay" v-if="monthMenuOpen" @click="monthMenuOpen=false"></div>
+                <div class="month-menu" v-if="monthMenuOpen">
+                  <div class="mm-head">
+                    <span class="mm-nav" @click="menuYear--"><icon name="chevrons-left" :size="14"></icon></span>
+                    <span class="mm-year">{{ menuYear }}</span>
+                    <span class="mm-nav" @click="menuYear++"><icon name="chevrons-right" :size="14"></icon></span>
+                  </div>
+                  <div class="mm-grid">
+                    <span class="mm-cell" v-for="m in 12" :key="m"
+                          :class="{sel: menuYear===viewY && m===viewM, disabled: !monthEnabled(menuYear,m)}"
+                          @click="monthEnabled(menuYear,m) && selectMonth(menuYear,m)">{{ m }} 月</span>
+                  </div>
+                </div>
+              </div>
+              <span class="navbtn" @click="nextMonth" title="下個月"><icon name="chevrons-right" :size="16"></icon></span>
+            </div>
+            <!-- 日曆數字說明標籤：只在有數字的模式出現（排除無限量＝無數量、日期共用＝無單日數字）；文案「可售總數」中性，兼容 SKU 獨立(加總)與 SKU 共用(同一池)兩種 -->
+            <a-tooltip v-if="!currentMode.unlimited && !currentMode.dateShared" placement="top">
+              <template #title>此數字為該日期在目前篩選範圍（SKU 與場次）內的可售庫存總數。調整上方篩選範圍，數字會隨之更新。</template>
+              <span class="cal-badge">可售總數<icon name="info" :size="12"></icon></span>
+            </a-tooltip>
+            <span class="tb-spacer"></span>
+            <span class="btn-today" @click="goToday">今日</span>
+            <!-- 月檢視/週檢視切換：先隱藏（calView 固定 month；週檢視程式碼保留，之後要再開啟把這段還原即可） -->
+            <div class="seg" v-if="false">
+              <span :class="{active:calView==='month'}" @click="setView('month')">月檢視</span>
+              <span :class="{active:calView==='week'}" @click="setView('week')">週檢視</span>
+            </div>
+          </div>
+
+        <!-- ---------- calendar ---------- -->
+        <!-- MONTH VIEW -->
+        <div class="cal-area" v-if="calView==='month'" ref="calArea" @scroll="onCalScroll" @click="clearSel">
+          <template v-for="(mo,mi) in monthsList" :key="mo.y+'-'+mo.m">
+            <div class="month-label" v-if="mi>0">{{ mo.y }} 年 {{ mo.m }} 月</div>
+            <div class="month-card" :data-ym="mo.y+'-'+mo.m">
+              <div class="cal-weekhead">
+                <div v-for="(w,wi) in weekHead" :key="w">{{ w }}</div>
+              </div>
+              <div class="cal-grid">
+                <div v-for="(c,idx) in cellsFor(mo.y,mo.m)" :key="idx"
+                     class="cal-cell"
+                     :class="{empty:!c.day, selected:c.dk && isSelected(c.dk), today:c.dk===todayKey, weekend:(idx%7)>=5, flashcell:c.dk && flashDates.includes(c.dk), alloff:c.dk && badgeOf(c.dk).alloff, jittip:jitVisible && selected.length===1 && c.dk===selected[0]}"
+                     @click="cellClick(c,$event)">
+                  <template v-if="c.day">
+                    <div class="cal-daynum">{{ String(c.day).padStart(2,'0') }}</div>
+                    <!-- just-in-time 多選提示（依設計稿 3717-803203）：貼在整格下方浮出、箭頭指向該格；靠邊自動翻轉左右/上下 -->
+                    <div class="jit-tip" :class="{right:(idx%7)>=4, up:jitUp}" v-if="jitVisible && selected.length===1 && c.dk===selected[0]" @click.stop>
+                      <span class="jt-ic"><icon name="bulb" :size="16"></icon></span>
+                      <span class="jt-tx"><span class="jt-l">想一次選取多天？</span>按住 <b>Shift</b> 選區間、<b>Cmd/Ctrl</b> 選多天</span>
+                    </div>
+                    <div class="cal-season" v-if="showSeason && seasonOf(c.dk)">{{ seasonOf(c.dk).label }}</div>
+                    <div class="cal-badges">
+                      <span v-if="badgeOf(c.dk).warn" class="cal-badge-dot badge-warn"><span class="dot"></span>部分庫存告急</span>
+                      <span v-if="badgeOf(c.dk).alloff" class="cal-badge-dot badge-off"><span class="dot"></span>全日下架</span>
+                      <span v-else-if="badgeOf(c.dk).off" class="cal-badge-dot badge-partial"><span class="dot"></span>部分下架</span>
+                    </div>
+                    <!-- 月曆數字＝「篩選範圍內加總」（範圍內的 SKU × 場次 當日加總）；單一 SKU 時即為該 SKU 數字 -->
+                    <!-- 日期共用庫存（dateShared）：所有日期共用同一池，單日沒有獨立數字→不顯示；無限量亦不顯示 -->
+                    <div class="cal-stock" v-if="!currentMode.unlimited && !currentMode.dateShared"><span class="num">{{ scopedDayNum(c.dk) }}</span></div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- WEEK VIEW -->
+        <div class="cal-area" v-else>
+          <div class="week-scroll">
+            <div class="week-grid">
+              <div class="wk-row wk-headrow">
+                <div class="wk-cell wk-skucol">SKU</div>
+                <div class="wk-cell wk-head" v-for="(dk,i) in weekDates" :key="dk" :class="{sel:isSelected(dk),wkend:isWeekendDk(dk)}" @click="clickDay(dk,$event)">
+                  <span class="wk-wd">{{ weekHead[i] }}</span>
+                  <span class="wk-dnum">{{ dayNumOf(dk) }}</span>
+                </div>
+              </div>
+              <div class="wk-row" v-for="s in aggSkus" :key="s.id">
+                <div class="wk-cell wk-skucol">{{ currentMode.skuShared ? '所有 SKU' : s.name }}</div>
+                <a-tooltip v-for="dk in weekDates" :key="dk" placement="top" color="#fff" overlay-class-name="wk-tip-overlay">
+                  <template #title>
+                    <div class="wk-tip-h">{{ fmtShort(dk) }}</div>
+                    <div class="wk-tip-h2">{{ currentMode.skuShared ? '所有 SKU' : s.name }}</div>
+                    <template v-if="!noSess"><div class="wk-tip-row" v-for="se in scopeSessions" :key="se"><span>{{ sessTitle(se) }}</span><span>{{ isOn(dk,se,s.id)?'上架':'下架' }}</span></div></template>
+                    <div class="wk-tip-total"><span>整日</span><span>{{ weekSkuOnline(dk,s.id) }}</span></div>
+                  </template>
+                  <div class="wk-cell wk-click" :class="{sel:isSelected(dk),wkend:isWeekendDk(dk)}" @click="clickDay(dk,$event)">
+                    <span class="wk-stat" :class="weekSkuOnline(dk,s.id)==='全下架'?'off':'on'">{{ weekSkuOnline(dk,s.id) }}</span>
+                  </div>
+                </a-tooltip>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div><!-- /cal-col -->
+
+        <!-- ---------- right panel ---------- -->
+        <div class="panel" ref="panelEl" @scroll="onPanelScroll">
+          <div class="panel-tabs" :class="{flush: showDateChip||showSkuChip}">
+            <button :class="{active:tab==='adjust'}" @click="tab='adjust'"><icon name="database" :size="18"></icon> 調整庫存</button>
+            <button :class="{active:tab==='status'}" @click="tab='status'"><icon name="eye" :size="18"></icon> 可售日期</button>
+          </div>
+
+          <!-- 錨點標籤列：捲過日期/SKU 欄位後才出現，點日期→捲回並展開日期選擇器；點 SKU→展開 SKU 篩選面板（平時 hide=0 高） -->
+          <div class="panel-anchors" :class="{hide: !showDateChip}" :style="{top: anchorsTop+'px'}">
+            <span class="anchor-chip" v-if="showDateChip" @click="jumpTo('date')"><span class="ac-ic"><icon name="calendar" :size="16"></icon></span>{{ anchorDateLabel }}</span>
+          </div>
+
+          <!-- date field (real AntD RangePicker; tags only for non-contiguous multi-select) -->
+          <template v-if="!(tab==='adjust' && (currentMode.unlimited || currentMode.dateShared))">
+            <div class="panel-sec date-sec" v-if="rangeActive || selContiguous">
+              <div class="panel-label"><span class="req">*</span>日期 <span class="link" v-if="selected.length" @click="clearSel">清除</span></div>
+              <a-range-picker :value="rangeValue" @change="onRange" style="width:100%" :open="dateOpen" @open-change="v=>dateOpen=v"
+                              :disabled-date="disabledDate"
+                              :placeholder="['開始日期','結束日期']" :default-picker-value="defPick"></a-range-picker>
+              <!-- 平日/週末 Segmented（依設計稿 3717-801948）：連續區間且橫跨平日+週末時才出現 -->
+              <div class="date-seg" v-if="showDateSeg">
+                <span :class="{active:dateMode==='all'}" @click="setDateMode('all')">全部日期</span>
+                <span :class="{active:dateMode==='weekday'}" @click="setDateMode('weekday')">只選平日</span>
+                <span :class="{active:dateMode==='weekend'}" @click="setDateMode('weekend')">只選週末</span>
+              </div>
+              <div class="date-hint" v-if="selected.length===0">可直接在此選取日期範圍</div>
+            </div>
+            <div class="panel-sec date-sec" v-else>
+              <div class="panel-label"><span class="req">*</span>日期 <span class="link" @click="clearSel">清除</span></div>
+              <div class="date-tags">
+                <div class="picked">已選取 {{ selected.length }} 個日期</div>
+                <span class="date-tag" v-for="d in selected" :key="d">{{ fmtShort(d) }}<span class="x" @click="toggleDay(d)"><icon name="x" :size="12"></icon></span></span>
+              </div>
+            </div>
+          </template>
+
+          <!-- key 含選取日期：點不同日期→pane 重掛→重播 paneIn 淡入，讓右側內容「跟著點擊變化」更有感（日期欄在 pane 外，不受影響） -->
+          <div class="tab-pane" :key="tab + '|' + selected.join(',')">
+          <!-- ===================== ADJUST TAB ===================== -->
+          <template v-if="tab==='adjust'">
+
+            <!-- unlimited: notice -->
+            <div v-if="currentMode.unlimited" class="plain-card">
+              <div class="tt">您目前的庫存模式為：無限量</div>
+              <div class="desc">若欲設定庫存數量，請先更改庫存模式。可於「可售日期」分頁管理上下架。</div>
+            </div>
+
+            <!-- 日期共用 + 已選日期：提示（此模式共用，選單日無意義） -->
+            <div v-else-if="currentMode.dateShared && selected.length" class="info-card">
+              <span class="ic"><icon name="bulb" :size="18"></icon></span>
+              <div>
+                <div class="tt">所有日期共用庫存</div>
+                <div class="desc">此方案所有日期共用同一份庫存，選取單一日期並不會只調整該日。請先取消日期選取，即可統一設定所有日期的庫存。</div>
+                <a-button size="small" type="primary" style="margin-top:10px" @click="clearSel">取消日期選取</a-button>
+              </div>
+            </div>
+
+            <!-- 日期共用(未選) 或 單日：當日庫存 inline 編輯 -->
+            <template v-else-if="(currentMode.dateShared && !selected.length) || selected.length===1">
+              <div class="panel-sec date-sec" v-if="currentMode.dateShared">
+                <div class="panel-label">日期</div>
+                <div class="date-field-ro"><span>所有日期（共用）</span><span class="suf"><icon name="calendar" :size="16"></icon></span></div>
+              </div>
+              <!-- 全日關閉銷售提示 banner（依設計稿 3697-676891）：日期下方、當日庫存上方；無連結 -->
+              <div class="day-notice" v-if="selected.length===1 && badgeOf(selected[0]).alloff">
+                <span class="dn-ic"><icon name="info-filled" :size="16"></icon></span>
+                <span class="dn-tx">此日期全日關閉銷售中。庫存調整會儲存，但需設定為可售才會販售</span>
+              </div>
+              <div class="day-head">
+                <span class="title">當日庫存</span>
+                <span class="link" :class="{cancel:dayBatch}" @click="dayBatch=!dayBatch"><icon :name="dayBatch?'x':'edit'" :size="14"></icon>{{ dayBatch ? '取消批次' : '批次編輯' }}</span>
+              </div>
+              <div class="batch-box" v-if="dayBatch">
+                <scope-bar :sku-count="visibleSkus.length" :sess-text="scopeSessRange" :no-sess="noSess" :shared="currentMode.skuShared" @edit="editScope"></scope-bar>
+                <qty-fields v-model:type="batchQtyType" v-model:value="batchQtyVal"></qty-fields>
+                <div class="panel-actions">
+                  <a-button size="large" @click="dayBatch=false">取消</a-button>
+                  <a-button size="large" type="primary" :disabled="!batchQtyVal || !targetSkus().length" @click="applyBatchStock">批次套用</a-button>
+                </div>
+              </div>
+              <!-- 批次編輯開啟時，下方各 SKU 清單 disabled(opacity .5)——依設計稿 3549-227580 -->
+              <div class="sess-list" :class="{'ro-locked':dayBatch}">
+              <div class="sess-group" :class="{nohead:noSess}" v-for="se in scopeSessions" :key="se">
+                <div class="sess-head" v-if="!noSess"><span class="lbl" @click="toggleSess(se)"><icon :name="sessClosed[se]?'ant-right':'ant-down'" :size="14"></icon>{{ sessTitle(se) }}</span></div>
+                <div class="sess-body" v-if="noSess || !sessClosed[se]">
+                  <template v-if="currentMode.skuShared">
+                    <div class="sku-card" :class="{editing:editKey===k(editDk,se,visibleSkus[0].id), flash:flashKeys.includes(k(editDk,se,visibleSkus[0].id))}">
+                      <template v-if="editKey!==k(editDk,se,visibleSkus[0].id)">
+                        <div class="sku-info"><div class="nm">所有 SKU</div><div class="av">可售 <b>{{ getStock(editDk,se,visibleSkus[0].id) }}</b><span class="av-delta" v-if="flashFromKey===k(editDk,se,visibleSkus[0].id)">原 {{ flashFrom }}</span></div></div>
+                        <span class="offtag" v-if="!isOn(editDk,se,visibleSkus[0].id)">下架中</span>
+                        <span class="edit" @click="startEdit(editDk,se,visibleSkus[0].id)"><icon name="edit" :size="15"></icon></span>
+                      </template>
+                      <div class="edit-full" v-else>
+                        <div class="nm">所有 SKU</div>
+                        <div class="edit-row"><span class="av-label">可售</span><a-input-number v-model:value="editVal" :min="0"></a-input-number><a-button type="primary" @click="saveEdit(editDk,se,visibleSkus[0].id)">確定</a-button><a-button @click="cancelEdit">取消</a-button></div>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <div class="sku-card" v-for="s in visibleSkus" :key="s.id" :class="{editing:editKey===k(editDk,se,s.id), flash:flashKeys.includes(k(editDk,se,s.id))}">
+                      <template v-if="editKey!==k(editDk,se,s.id)">
+                        <div class="sku-info"><div class="nm">{{ s.name }}</div><div class="av">可售 <b>{{ getStock(editDk,se,s.id) }}</b><span class="av-delta" v-if="flashFromKey===k(editDk,se,s.id)">原 {{ flashFrom }}</span></div></div>
+                        <span class="offtag" v-if="!isOn(editDk,se,s.id)">下架中</span>
+                        <span class="edit" @click="startEdit(editDk,se,s.id)"><icon name="edit" :size="15"></icon></span>
+                      </template>
+                      <div class="edit-full" v-else>
+                        <div class="nm">{{ s.name }}</div>
+                        <div class="edit-row"><span class="av-label">可售</span><a-input-number v-model:value="editVal" :min="0"></a-input-number><a-button type="primary" @click="saveEdit(editDk,se,s.id)">確定</a-button><a-button @click="cancelEdit">取消</a-button></div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              </div><!-- /sess-list -->
+            </template>
+
+            <!-- date-independent, 0 selected: 乾淨空畫面（範圍提示留給「選了日期」後；月曆已有數字） -->
+            <template v-else-if="selected.length===0">
+              <div class="empty-hint">
+                <span class="eh-ic"><icon name="calendar" :size="20"></icon></span>
+                <div class="eh-t">請先選擇日期</div>
+                <div class="eh-d">點選左側月曆的日期即可編輯當日庫存。</div>
+                <select-methods></select-methods>
+              </div>
+            </template>
+
+            <!-- date-independent, >=2 selected: batch form -->
+            <template v-else>
+              <!-- 多日批次：關閉銷售提示 banner（依設計稿 3706-731857＝在範圍上方）；含下架項目才顯示 -->
+              <div class="day-notice" v-if="scopeHasOffline()">
+                <span class="dn-ic"><icon name="info-filled" :size="16"></icon></span>
+                <span class="dn-tx">所選日期中有關閉銷售的項目。庫存調整會儲存，但需設定為可售才會販售</span>
+              </div>
+              <scope-bar :sku-count="visibleSkus.length" :sess-text="scopeSessRange" :no-sess="noSess" :shared="currentMode.skuShared" @edit="editScope"></scope-bar>
+              <qty-fields v-model:type="batchQtyType" v-model:value="batchQtyVal"></qty-fields>
+              <div class="panel-actions"><a-button size="large" type="primary" block :disabled="!batchQtyVal || !targetSkus().length" @click="applyBatchStock">批次套用</a-button></div>
+            </template>
+          </template>
+
+          <!-- ===================== STATUS TAB (uniform) ===================== -->
+          <template v-else>
+            <!-- 0 selected: 乾淨空畫面 -->
+            <template v-if="selected.length===0">
+              <div class="empty-hint">
+                <span class="eh-ic"><icon name="eye" :size="20"></icon></span>
+                <div class="eh-t">請先選擇日期</div>
+                <div class="eh-d">點選左側月曆的日期即可編輯當日可售狀態。</div>
+                <select-methods></select-methods>
+              </div>
+            </template>
+
+            <!-- 1 selected: session toggles -->
+            <template v-else-if="selected.length===1">
+              <div class="day-head">
+                <span class="title">當日可售狀態</span>
+                <span class="link" :class="{cancel:statBatch}" @click="statBatch=!statBatch"><icon :name="statBatch?'x':'edit'" :size="14"></icon>{{ statBatch?'取消批次':'批次調整' }}</span>
+              </div>
+              <div class="batch-box" v-if="statBatch">
+                <scope-bar :sku-count="visibleSkus.length" :sess-text="scopeSessRange" :no-sess="noSess" @edit="editScope"></scope-bar>
+                <div class="panel-sec"><div class="panel-label"><span class="req">*</span>銷售狀態</div>
+                  <a-radio-group v-model:value="batchStatus"><a-radio value="on">上架</a-radio><a-radio value="off">下架</a-radio></a-radio-group>
+                </div>
+                <div class="panel-actions">
+                  <a-button size="large" @click="statBatch=false">取消</a-button>
+                  <a-button size="large" type="primary" :disabled="!batchStatus || !targetSkus().length" @click="applyBatchStatus">批次套用</a-button>
+                </div>
+              </div>
+              <!-- 批次調整開啟時，下方各 SKU 清單 disabled(opacity .5)——依設計稿 3549-227580 -->
+              <div class="sess-list" :class="{'ro-locked':statBatch}">
+              <div class="sess-group" :class="{nohead:noSess}" v-for="se in scopeSessions" :key="se">
+                <div class="sess-head" v-if="!noSess">
+                  <span class="lbl" @click="toggleSess(se)"><icon :name="sessClosed[se]?'ant-right':'ant-down'" :size="14"></icon>{{ sessTitle(se) }}</span>
+                  <span class="sess-right">
+                    <!-- 部分上/下架時，switch 會呈未勾（像全下架），加標籤消歧義；用跟月曆一致的「部分下架」詞彙 -->
+                    <span class="sess-partial" v-if="sessionState(selected[0],se)==='partial'"><span class="dot"></span>部分下架</span>
+                    <a-switch :checked="sessionMaster(selected[0],se)" @change="on=>toggleSession(selected[0],se,on)"></a-switch>
+                  </span>
+                </div>
+                <div class="sess-body" v-if="noSess || !sessClosed[se]">
+                  <template v-if="currentMode.skuShared">
+                    <div class="sku-card" :class="{flash:flashKeys.includes(k(selected[0],se,visibleSkus[0].id))}"><div class="nm">所有 SKU</div><a-switch :checked="isOn(selected[0],se,visibleSkus[0].id)" @change="on=>toggleSku(selected[0],se,visibleSkus[0].id,on)"></a-switch></div>
+                  </template>
+                  <template v-else>
+                    <div class="sku-card" v-for="s in visibleSkus" :key="s.id" :class="{flash:flashKeys.includes(k(selected[0],se,s.id))}"><div class="nm">{{ s.name }}</div><a-switch :checked="isOn(selected[0],se,s.id)" @change="on=>toggleSku(selected[0],se,s.id,on)"></a-switch></div>
+                  </template>
+                </div>
+              </div>
+              </div><!-- /sess-list -->
+            </template>
+
+            <!-- >=2 selected: batch status -->
+            <template v-else>
+              <scope-bar :sku-count="visibleSkus.length" :sess-text="scopeSessRange" :no-sess="noSess" @edit="editScope"></scope-bar>
+              <div class="panel-sec"><div class="panel-label"><span class="req">*</span>銷售狀態</div>
+                <a-radio-group v-model:value="batchStatus"><a-radio value="on">上架</a-radio><a-radio value="off">下架</a-radio></a-radio-group>
+              </div>
+              <div class="panel-actions"><a-button size="large" type="primary" block :disabled="!batchStatus || !targetSkus().length" @click="applyBatchStatus">批次套用狀態</a-button></div>
+            </template>
+          </template>
+          </div>
+        </div>
+        <!-- 篩選展開時的深色遮罩（依設計稿 3549-143310）：用實體 overlay div 而非 ::after，確保穩定蓋在月曆/panel 之上 -->
+        <div class="lock-mask" v-if="fExpanded"></div>
+        </div><!-- /inv-grid -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 庫存模式設定 wizard（依 Figma 3549:143159~143244）===== -->
+  <a-modal v-model:open="switcherOpen" :footer="null" :title="null" :width="896" :body-style="{padding:'0'}" wrap-class-name="wiz-wrap">
+    <div class="wiz">
+      <div class="wiz-head"><span class="wiz-title">庫存模式設定</span></div>
+      <div class="wiz-sub">
+        <div class="wiz-scheme">方案：{{ prodPlan }}</div>
+        <a-steps :current="wizardStep-1" size="default" class="wiz-steps">
+          <a-step title="庫存類型"></a-step>
+          <a-step title="日期分配"></a-step>
+          <a-step title="SKU 分配"></a-step>
+          <a-step title="確認"></a-step>
+        </a-steps>
+      </div>
+
+      <div class="wiz-alert warn" v-if="wizardStep===1">
+        <span class="wa-ic"><icon name="info" :size="16"></icon></span>
+        <ul><li>更改庫存模式後，將清空原本的庫存數量設定。</li><li>儲存後立即生效。若是大範圍異動，建議先將方案下架，設定完成後再上架銷售。</li></ul>
+      </div>
+      <div class="wiz-alert info" v-else-if="wizardStep===2"><span class="wa-ic"><icon name="info" :size="16"></icon></span><span>這個設定決定方案下是每個日期獨立計算庫存，還是所有日期共用一個總庫存數。</span></div>
+      <div class="wiz-alert info" v-else-if="wizardStep===3"><span class="wa-ic"><icon name="info" :size="16"></icon></span><span>這個設定決定方案下的所有 SKU 是各自獨立計算庫存，還是共用一個總庫存數。</span></div>
+      <div class="wiz-alert ok" v-else><span class="wa-ic"><icon name="check" :size="16"></icon></span><span>步驟完成！請確認以下配置：</span></div>
+
+      <div class="wiz-body">
+        <!-- STEP 1 -->
+        <div class="wiz-cards" v-if="wizardStep===1">
+          <div class="wiz-card" :class="{sel:wType==='unlimited'}" @click="wType='unlimited'">
+            <div class="wc-top"><span class="wc-radio" :class="{on:wType==='unlimited'}"><icon v-if="wType==='unlimited'" name="check" :size="12"></icon></span><span class="wc-title">無限量庫存</span><span class="wc-badge" v-if="currentMode.unlimited">目前使用</span></div>
+            <div class="wc-desc">無限供應，無需設定庫存數量，不會因為銷售而減少。</div>
+            <div class="wc-eg" :class="{sel:wType==='unlimited'}"><div class="wc-eg-t">📌 範例：esim</div><ul><li>12/1 容量1G：無限量</li><li>12/2 容量 1G：無限量</li><li>12/3 容量 1G：無限量</li></ul><div class="wc-eg-s">→ 無限量庫存</div></div>
+          </div>
+          <div class="wiz-card" :class="{sel:wType==='limited'}" @click="wType='limited'">
+            <div class="wc-top"><span class="wc-radio" :class="{on:wType==='limited'}"><icon v-if="wType==='limited'" name="check" :size="12"></icon></span><span class="wc-title">有限量庫存</span><span class="wc-badge" v-if="!currentMode.unlimited">目前使用</span></div>
+            <div class="wc-desc">有限供應，需設定庫存數量。</div>
+            <div class="wc-eg" :class="{sel:wType==='limited'}"><div class="wc-eg-t">📌 範例：門票</div><ul><li>12/1 可賣 25 組</li><li>12/2 可賣 80 組</li><li>12/3 可賣 50 組</li></ul><div class="wc-eg-s">→ 庫存有上限，售完即無法銷售</div></div>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="wiz-cards" v-else-if="wizardStep===2">
+          <div class="wiz-card" :class="{sel:wDate==='ind'}" @click="wDate='ind'">
+            <div class="wc-top"><span class="wc-radio" :class="{on:wDate==='ind'}"><icon v-if="wDate==='ind'" name="check" :size="12"></icon></span><span class="wc-title">日期獨立設定庫存</span><span class="wc-badge" v-if="!currentMode.dateShared">目前使用</span></div>
+            <div class="wc-desc">每個日期有各自的庫存配額，互不影響。</div>
+            <div class="wc-eg" :class="{sel:wDate==='ind'}"><div class="wc-eg-t">📌 範例：迪士尼門票</div><ul><li>12/1：1000 張</li><li>12/2：1500 張</li><li>12/3：1200 張</li></ul><div class="wc-eg-s">→ 每個日期獨立計算</div></div>
+          </div>
+          <div class="wiz-card" :class="{sel:wDate==='shared'}" @click="wDate='shared'">
+            <div class="wc-top"><span class="wc-radio" :class="{on:wDate==='shared'}"><icon v-if="wDate==='shared'" name="check" :size="12"></icon></span><span class="wc-title">所有日期共用庫存池</span><span class="wc-badge" v-if="currentMode.dateShared">目前使用</span></div>
+            <div class="wc-desc">所有日期共用同一庫存數量。</div>
+            <div class="wc-eg" :class="{sel:wDate==='shared'}"><div class="wc-eg-t">📌 範例：彈性套票（共 200 組）</div><ul><li>12/1 賣 25 組 → 剩 175</li><li>12/2 賣 80 組 → 剩 95</li><li>12/3 賣 50 組 → 剩 45</li></ul><div class="wc-eg-s">→ 所有日期共用，總共 200 組</div></div>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="wiz-cards" v-else-if="wizardStep===3">
+          <div class="wiz-card" :class="{sel:wSku==='ind'}" @click="wSku='ind'">
+            <div class="wc-top"><span class="wc-radio" :class="{on:wSku==='ind'}"><icon v-if="wSku==='ind'" name="check" :size="12"></icon></span><span class="wc-title">SKU 獨立設定庫存</span><span class="wc-badge" v-if="!currentMode.skuShared">目前使用</span></div>
+            <div class="wc-desc">每個 SKU 有各自的庫存配額，互不影響。</div>
+            <div class="wc-eg" :class="{sel:wSku==='ind'}"><div class="wc-eg-t">📌 範例：迪士尼門票</div><ul><li>Land x 成人：5000 張</li><li>Land x 學生：2500 張</li><li>Land x 兒童：1000 張</li></ul><div class="wc-eg-s">→ 每個 SKU 獨立計算</div></div>
+          </div>
+          <div class="wiz-card" :class="{sel:wSku==='shared'}" @click="wSku='shared'">
+            <div class="wc-top"><span class="wc-radio" :class="{on:wSku==='shared'}"><icon v-if="wSku==='shared'" name="check" :size="12"></icon></span><span class="wc-title">所有 SKU 共用庫存池</span><span class="wc-badge" v-if="currentMode.skuShared">目前使用</span></div>
+            <div class="wc-desc">所有 SKU 共用同一庫存數量，從中扣減。</div>
+            <div class="wc-eg" :class="{sel:wSku==='shared'}"><div class="wc-eg-t">📌 範例：巴士座位（共 50 位）</div><ul><li>成人票賣 25 組 → 剩 25</li><li>學生票賣 15 組 → 剩 10</li><li>兒童票賣 8 組 → 剩 2</li></ul><div class="wc-eg-s">→ 所有 SKU 共用，總共 50 個座位</div></div>
+          </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div v-else>
+          <div class="wiz-sum">
+            <div class="ws-card"><div class="ws-h"><span class="ws-n">1</span>庫存類型</div><div class="ws-chip">{{ wType==='unlimited'?'無限量庫存':'有限量庫存' }}</div><div class="ws-d">{{ wType==='unlimited'?'不限供應，僅需管理上下架狀態':'有限供應，需設定庫存數量' }}</div></div>
+            <template v-if="wType!=='unlimited'">
+              <div class="ws-card"><div class="ws-h"><span class="ws-n">2</span>日期分配</div><div class="ws-chip">{{ wDate==='ind'?'日期獨立設定庫存':'所有日期共用庫存池' }}</div><div class="ws-d">{{ wDate==='ind'?'每個日期都可以獨立設定其庫存數量':'所有日期共用同一份庫存配額' }}</div></div>
+              <div class="ws-card"><div class="ws-h"><span class="ws-n">3</span>SKU 分配</div><div class="ws-chip">{{ wSku==='ind'?'SKU 獨立設定庫存':'所有 SKU 共用庫存池' }}</div><div class="ws-d">{{ wSku==='ind'?'每個 SKU 有各自的庫存配額':'所有 SKU 共用同一份配額' }}</div></div>
+            </template>
+          </div>
+          <div class="wiz-next">
+            <div class="wn-t">📋 接下來您可以：</div>
+            <ul><li>使用日曆視圖設定庫存數量與可售狀態</li><li>使用「快速批量」功能快速設定日期範圍的庫存</li><li>回來此設定更改庫存類型設定</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="wiz-foot">
+        <a-button v-if="wizardStep>1" @click="wizPrev">上一步</a-button>
+        <a-button v-if="wizardStep<4" type="primary" @click="wizNext">下一步</a-button>
+        <a-button v-else type="primary" @click="applyWizard">套用設定</a-button>
+      </div>
+    </div>
+  </a-modal>
+
+ </a-config-provider>
+</div>
+
+<!-- ===== deps (ant-design-vue UMD needs Vue + dayjs + plugins) ===== -->
+<script src="./vendor/vue.global.js"></script>
+<script src="./vendor/dayjs.min.js"></script>
+<script src="./vendor/plugin/customParseFormat.js"></script>
+<script src="./vendor/plugin/weekday.js"></script>
+<script src="./vendor/plugin/localeData.js"></script>
+<script src="./vendor/plugin/weekOfYear.js"></script>
+<script src="./vendor/plugin/weekYear.js"></script>
+<script src="./vendor/plugin/advancedFormat.js"></script>
+<script src="./vendor/plugin/quarterOfYear.js"></script>
+<script>
+// ant-design-vue@4 UMD factory 依賴這些 dayjs 全域（缺 weekYear 會讓 window.antd 整個 undefined）
+dayjs.extend(dayjs_plugin_customParseFormat);dayjs.extend(dayjs_plugin_weekday);
+dayjs.extend(dayjs_plugin_localeData);dayjs.extend(dayjs_plugin_weekOfYear);
+dayjs.extend(dayjs_plugin_weekYear);
+dayjs.extend(dayjs_plugin_advancedFormat);dayjs.extend(dayjs_plugin_quarterOfYear);
+</script>
+<script src="./vendor/antd.min.js"></script>
+
+<script>
+const { createApp } = Vue;
+
+/* ---- feather-style icon set ---- */
+const P = {
+  'chevron-down':'<polyline points="6 9 12 15 18 9"/>',
+  'chevron-up':'<polyline points="18 15 12 9 6 15"/>',
+  'chevron-left':'<polyline points="15 18 9 12 15 6"/>',
+  'chevron-right':'<polyline points="9 18 15 12 9 6"/>',
+  'chevrons-left':'<polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>',
+  'chevrons-right':'<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>',
+  'arrow-left':'<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  'home':'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  'search':'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  'edit':'<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  'calendar':'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  'clock':'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  'globe':'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  'book':'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  'info':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  'smartphone':'<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  'bell':'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  'bulb':'<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>',
+  'eye':'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  'database':'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
+  'list':'<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  'filter':'<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+  'x':'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  'check':'<polyline points="20 6 9 17 4 12"/>',
+  // rail glyphs reuse
+  'message':'<path d="M4 4h16v12H5.17L4 17.17z"/>','order':'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+  'writeoff':'<rect x="3" y="5" width="18" height="14" rx="1"/><line x1="7" y1="9" x2="7" y2="15"/><line x1="11" y1="9" x2="11" y2="15"/><line x1="15" y1="9" x2="15" y2="15"/>',
+  'comment':'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  'shopping':'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  'frequent':'<path d="M21 11.5a8.38 8.38 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 20l1-5a8.38 8.38 0 0 1 8-10.5 8.38 8.38 0 0 1 9 7z"/>',
+  'datacenter':'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  'report':'<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="9" y2="17"/><line x1="15" y1="7" x2="15" y2="17"/>',
+  'supplier':'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h3M15 12h3M5 16h14"/>',
+  'auth':'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  'otp':'<path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/>',
+};
+// AntD 原生 outlined icons（填色、viewBox 1024）
+const PF = {
+  'ant-down':'<path d="M884 256h-75c-5.1 0-9.9 2.5-12.9 6.6L512 654.2 227.9 262.6c-3-4.1-7.8-6.6-12.9-6.6h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z"/>',
+  'ant-right':'<path d="M765.7 486.8L314.9 134.7A7.97 7.97 0 00302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V863c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 000-50.4z"/>',
+  'info-filled':'<path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z"/><rect x="480" y="456" width="64" height="288" rx="16" fill="#fff"/><circle cx="512" cy="356" r="40" fill="#fff"/>',
+};
+const IconComp = {
+  name:'icon',
+  props:{ name:String, size:{type:Number, default:16} },
+  computed:{ filled(){ return this.name in PF; }, path(){ return this.filled ? PF[this.name] : (P[this.name] || P['info']); } },
+  template:`<span class="icon"><svg v-if="filled" :width="size" :height="size" viewBox="0 0 1024 1024" fill="currentColor" v-html="path"></svg><svg v-else :width="size" :height="size" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="path"></svg></span>`
+};
+
+/* ---- shared sub-components ---- */
+// 場次範圍：只能選到此商品「實際設定的場次」之間（非任意時間）
+const SessRange = {
+  name:'sess-range',
+  props:{ options:{type:Array,default:()=>[]}, from:[String,null], to:[String,null], disabled:{type:Boolean,default:false}, bare:{type:Boolean,default:false} },
+  emits:['update:from','update:to'],
+  computed:{
+    // 已選開始→結束只能選它之後；已選結束→開始只能選它之前（依 options 順序 index）
+    fromIdx(){ return this.options.findIndex(o=>o.value===this.from); },
+    toIdx(){ return this.options.findIndex(o=>o.value===this.to); },
+    fromOptions(){ return this.options.map((o,i)=> (this.toIdx>=0 && i>this.toIdx) ? {...o,disabled:true} : {...o,disabled:false}); },
+    toOptions(){ return this.options.map((o,i)=> (this.fromIdx>=0 && i<this.fromIdx) ? {...o,disabled:true} : {...o,disabled:false}); }
+  },
+  methods:{
+    onFrom(v){ this.$emit('update:from',v); const fi=this.options.findIndex(o=>o.value===v); if(this.toIdx>=0 && this.toIdx<fi) this.$emit('update:to',v); },  // 開始晚於結束→結束跟上
+    onTo(v){ this.$emit('update:to',v); const ti=this.options.findIndex(o=>o.value===v); if(this.fromIdx>=0 && this.fromIdx>ti) this.$emit('update:from',v); }  // 結束早於開始→開始跟上
+  },
+  template:`<div class="panel-sec" :class="{'sess-bare':bare}">
+      <div class="panel-label" v-if="!bare">場次時間</div>
+      <div class="sess-range">
+        <a-select :value="from" @update:value="onFrom" :options="fromOptions" style="flex:1" :disabled="disabled" placeholder="全部場次"></a-select>
+        <span class="arr">→</span>
+        <a-select :value="to" @update:value="onTo" :options="toOptions" style="flex:1" :disabled="disabled" placeholder="全部場次"></a-select>
+      </div>
+    </div>`
+};
+// 月曆選取方式說明（空畫面共用，調整庫存／銷售狀態一致）
+const SelectMethods = {
+  name:'select-methods',
+  template:`<ul class="eh-methods">
+      <li><b>單擊</b>：選取單日</li>
+      <li><b>Shift ＋ 點選</b>：選取連續範圍</li>
+      <li><b>Cmd / Ctrl ＋ 點選</b>：多選不連續日期</li>
+    </ul>`
+};
+// SKU 共用模式：停用勾選的「所有 SKU」+ 說明（依設計稿 3457:103758）
+const SharedSkuNote = {
+  name:'shared-sku-note',
+  template:`<div class="panel-sec">
+      <div class="panel-label">SKU</div>
+      <div class="sku-shared-box"><a-checkbox :checked="true" :disabled="true">所有 SKU</a-checkbox></div>
+      <div class="sku-caption-desc">當前庫存模式為所有 SKU 共用同一庫存池</div>
+    </div>`
+};
+const SkuPicker = {
+  name:'sku-picker',
+  props:{ skus:Array, checked:{type:Array, default:()=>[]}, disabled:{type:Boolean,default:false} },
+  emits:['update:checked'],
+  data(){ return { q:'', otherOpen:true }; },
+  computed:{
+    filtered(){ const toks=this.q.trim().split(/\s+/).filter(Boolean); if(!toks.length) return this.skus; return this.skus.filter(s=>toks.every(t=>s.name.includes(t))); },  // 多關鍵字：空格分隔、AND
+    // 已選取但不在目前搜尋結果內的 SKU
+    others(){ const fids=this.filtered.map(s=>s.id); return this.skus.filter(s=>this.checked.includes(s.id) && !fids.includes(s.id)); },
+    allFilteredChecked(){ return this.filtered.length>0 && this.filtered.every(s=>this.checked.includes(s.id)); },
+    allBtnText(){
+      if(this.q) return (this.allFilteredChecked ? '取消全選' : '全選') + ' (' + this.filtered.length + ')';
+      return this.checked.length===this.skus.length ? '取消全選' : '全選';
+    },
+  },
+  methods:{
+    toggle(id,on){ const a=this.checked.slice(); if(on){ if(!a.includes(id)) a.push(id); } else { const i=a.indexOf(id); if(i>=0) a.splice(i,1); } this.$emit('update:checked',a); },
+    toggleAll(){
+      if(this.q){ const fids=this.filtered.map(s=>s.id); let a=this.checked.slice();
+        if(this.allFilteredChecked){ a=a.filter(id=>!fids.includes(id)); } else { fids.forEach(id=>{ if(!a.includes(id)) a.push(id); }); }
+        this.$emit('update:checked',a);
+      } else { this.$emit('update:checked', this.checked.length===this.skus.length ? [] : this.skus.map(s=>s.id)); }
+    },
+  },
+  template:`<div class="panel-sec">
+      <div class="panel-label"><span class="req">*</span>SKU <span class="link" @click="toggleAll">{{ allBtnText }}</span></div>
+      <div class="sku-box">
+        <div class="sku-search-cell"><span class="sku-search"><span class="ic"><icon name="search" :size="14"></icon></span><input v-model="q" placeholder="搜尋 SKU" :disabled="disabled" /></span></div>
+        <div class="sku-rows">
+          <label class="sku-opt" v-for="s in filtered" :key="s.id">
+            <a-checkbox :checked="checked.includes(s.id)" @change="e=>toggle(s.id,e.target.checked)" :disabled="disabled"></a-checkbox>
+            {{ s.name }}
+          </label>
+          <div class="sku-empty" v-if="!filtered.length">沒有符合的 SKU</div>
+          <div class="sku-other" v-if="others.length">
+            <div class="sku-other-h" @click="otherOpen=!otherOpen">其他已選擇項目 ({{ others.length }})<icon :name="otherOpen?'chevron-up':'chevron-down'" :size="14"></icon></div>
+            <template v-if="otherOpen">
+              <div class="sku-opt sku-other-row" v-for="s in others" :key="s.id">{{ s.name }}<span class="x" @click="toggle(s.id,false)"><icon name="x" :size="14"></icon></span></div>
+            </template>
+          </div>
+        </div>
+      </div>
+      <div class="sku-caption" v-if="q">已選 {{ checked.length }} 個</div>
+    </div>`
+};
+const QtyFields = {
+  name:'qty-fields',
+  props:{ type:{type:String,default:'total'}, value:{type:[String,Number],default:''}, disabled:{type:Boolean,default:false} },
+  emits:['update:type','update:value'],
+  template:`<div class="panel-sec">
+      <div class="panel-label"><span class="req">*</span>可售數量</div>
+      <a-radio-group :value="type" @update:value="v=>$emit('update:type',v)" class="qty-radios" :disabled="disabled">
+        <a-radio value="total">總數量</a-radio>
+        <a-radio value="add">增加數量</a-radio>
+        <a-radio value="reduce">減少數量</a-radio>
+      </a-radio-group>
+      <a-input :value="value" @update:value="v=>$emit('update:value',v)" placeholder="請輸入數值" :disabled="disabled"></a-input>
+    </div>`
+};
+// 調整範圍摘要（取代右側 panel 的 SKU/場次選擇；範圍由上方篩選界定）
+const ScopeBar = {
+  name:'scope-bar',
+  emits:['edit'],
+  props:{ skuCount:Number, sessText:String, noSess:Boolean, shared:{type:Boolean,default:false} },
+  template:`<div class="scope-bar">
+      <span class="sb-label">範圍：</span>
+      <template v-if="shared">
+        <div class="sb-line"><b>全部</b> SKU（共用）</div>
+        <div class="sb-line" v-if="!noSess"><b>{{ sessText }}</b> 場次 <span class="sb-edit sb-u" @click="$emit('edit')">調整場次</span></div>
+      </template>
+      <div class="sb-row" v-else>
+        <span class="sb-text"><b>{{ skuCount }}</b> 個 SKU<template v-if="!noSess">、<b>{{ sessText }}</b> 場次</template></span>
+        <span class="sb-edit" @click="$emit('edit')">調整</span>
+      </div>
+    </div>`
+};
+// 無日期時的預覽：範圍摘要(可操作) + 數量/狀態 disabled（SKU/場次已移到上方篩選）
+const BatchPreview = {
+  name:'batch-preview',
+  props:{ noSess:Boolean, unlimited:Boolean, skuCount:Number, sessText:String, hint:{type:String,default:'點選日期即可編輯庫存'} },
+  emits:['edit'],
+  template:`<div>
+      <div class="bp-hint"><span class="ic"><icon name="info-filled" :size="16"></icon></span>{{ hint }}</div>
+      <scope-bar :sku-count="skuCount" :sess-text="sessText" :no-sess="noSess" @edit="$emit('edit')"></scope-bar>
+      <div class="batch-preview" aria-hidden="true">
+        <qty-fields v-if="!unlimited" type="total" value="" :disabled="true"></qty-fields>
+        <div class="panel-sec"><div class="panel-label"><span class="req">*</span>銷售狀態</div>
+          <a-radio-group :value="null" :disabled="true"><a-radio value="on">上架</a-radio><a-radio value="off">下架</a-radio></a-radio-group>
+        </div>
+        <div class="panel-actions"><a-button size="large" type="primary" block disabled>批次套用</a-button></div>
+      </div>
+    </div>`
+};
+
+/* ---- root ---- */
+const app = createApp({
+  data(){
+    return {
+      tab:'adjust',
+      selected:[],            // selected day numbers (Dec 2025)
+      showDateChip:false, showSkuChip:false, anchorsTop:80, dateOpen:false,  // 錨點標籤列 + 日期選擇器展開狀態
+      jitVisible:false, jitDone:false, jitUp:false,  // just-in-time 多選提示：首次開始選取時冒出、幾秒淡掉；用過多選即不再提示（jitUp＝下方空間不足改往上開）
+      rangeStart:null, rangeEnd:null, dateMode:'all',  // 連續區間的起訖(記意圖) + 平日/週末篩選模式：日期欄顯示區間、月曆顯示篩選後的日期
+      // 月曆狀態化翻修：告急與期間標示先做、用 flag 隱藏（翻 true 即顯示）
+      showWarn:false, showSeason:false,
+      seasons:[ {s:'2026-02-14',e:'2026-02-22',label:'過年',type:'peak'}, {s:'2026-04-03',e:'2026-04-06',label:'清明連假',type:'peak'} ],
+      dayBatch:false,
+      switcherOpen:false,
+      draftMode:'ind_ind',
+      modeKey:'ind_ind',
+      sharedFormOpen:false,
+      // antd 主題 token（讓 Steps/Button/Picker/Switch 等全部用 SCM 藍，而非 antd 預設藍）
+      scmTheme:{ token:{ colorPrimary:'#44A0F4', colorSuccess:'#74C41A', colorWarning:'#FFB400', colorError:'#E65F50', colorInfo:'#44A0F4', borderRadius:6, colorLink:'#44A0F4', fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif" } },
+      // 更改庫存模式 wizard
+      wizardStep:1, wType:'limited', wDate:'ind', wSku:'ind',
+      weekHead:['週一','週二','週三','週四','週五','週六','週日'],
+      sessions:[], sessUnit:'場次', noSess:false, prodTitle:'', prodPlan:'', dimLabels:[],
+      // ---- reactive inventory state ----
+      stock:{},      // key `${dk}_${se}_${id}` -> number
+      online:{},     // key `${dk}_${se}_${id}` -> boolean
+      editKey:null, editVal:'',          // single-day inline edit
+      flashKeys:[], flashFrom:null, flashFromKey:null, flashDates:[],   // 操作後回饋：卡片高亮(可多張)/原值、批次跨多日才高亮日期格
+      batchQtyType:'total', batchQtyVal:'', batchSkus:[], batchStatus:null, // batch form（銷售狀態預設不選，逼使用者選）
+      statBatch:false, batchSessFrom:null, batchSessTo:null,   // 銷售狀態批次 + 場次範圍
+      sessClosed:{},   // 場次收合狀態（key=場次時間）
+      // ---- calendar view / filter ----
+      viewY:2025, viewM:12, calView:'month', weekStart:'2025-12-01', monthsList:[], todayKey:'2025-12-15',
+      monthMenuOpen:false, menuYear:2025,   // 月曆 header 月份下拉
+      activeSkus:null,   // null = all
+      fExpanded:false, fDims:{}, fExclude:[],   // 維度篩選狀態（fDims: dimIdx -> 已選值[]）
+      filterSessFrom:null, filterSessTo:null, showScopeSkus:false,   // 已套用的篩選（界定編輯範圍）
+      fDimsDraft:{}, draftSessFrom:null, draftSessTo:null,   // 展開中的草稿（套用才寫回 fDims/filterSess）
+      rail:[
+        {k:'home',active:false},{k:'message'},{k:'order'},{k:'writeoff'},{k:'comment'},
+        {k:'shopping',active:true},{k:'frequent'},{k:'datacenter'},{k:'report'},{k:'supplier'},{k:'auth'},{k:'otp'}
+      ],
+      skus:[],
+      // 每種庫存模式對應「合理的」示範商品（標題／方案／場次／維度／SKU）
+      modeContent:{
+        ind_ind:{   // 日期獨立×SKU獨立：門票，每日每規格各自庫存
+          title:'東京迪士尼樂園門票', plan:'一日護照 ｜ 標準電子票券',
+          sessions:['09:00','13:00'], unit:'場次', dims:['票種天數','適用樂園','年齡'],
+          skus:[
+            {id:1,name:'一日票 × 迪士尼樂園 × 成人',avail:755},
+            {id:2,name:'一日票 × 迪士尼樂園 × 學生',avail:322},
+            {id:3,name:'一日票 × 迪士尼樂園 × 兒童',avail:155},
+            {id:4,name:'一日票 × 迪士尼海洋 × 成人',avail:620},
+            {id:5,name:'一日票 × 迪士尼海洋 × 學生',avail:540},
+            {id:6,name:'一日票 × 迪士尼海洋 × 兒童',avail:210},
+            {id:7,name:'二日票 × 迪士尼樂園 × 成人',avail:480},
+            {id:8,name:'二日票 × 迪士尼樂園 × 學生',avail:155},
+            {id:9,name:'二日票 × 迪士尼樂園 × 兒童',avail:300},
+            {id:10,name:'二日票 × 迪士尼海洋 × 成人',avail:480},
+            {id:11,name:'二日票 × 迪士尼海洋 × 學生',avail:322},
+            {id:12,name:'二日票 × 迪士尼海洋 × 兒童',avail:113},
+          ]
+        },
+        ind_shared:{   // 日期獨立×SKU共用：一日遊，每梯次座位固定、票種共用座位
+          title:'河口湖・富士山全景巴士一日遊', plan:'中文導遊 ｜ 經典環湖方案',
+          sessions:['08:00','13:30'], unit:'出發', dims:['票種'],
+          skus:[
+            {id:1,name:'成人',avail:45},
+            {id:2,name:'兒童',avail:45},
+            {id:3,name:'敬老',avail:45},
+          ]
+        },
+        shared_ind:{   // 日期共用×SKU獨立：周遊卡，各票種總量固定、不分日期
+          title:'大阪周遊卡 Osaka Amazing Pass', plan:'電子票券 ｜ 標準方案',
+          sessions:['_'], noSess:true, unit:'', dims:['票券效期','年齡'],
+          skus:[
+            {id:1,name:'1日券 × 成人',avail:200},
+            {id:2,name:'1日券 × 兒童',avail:120},
+            {id:3,name:'2日券 × 成人',avail:150},
+            {id:4,name:'2日券 × 兒童',avail:80},
+          ]
+        },
+        shared_shared:{   // 日期共用×SKU共用：期間限定展，單一總名額、不分票種/日期
+          title:'teamLab Planets TOKYO 期間限定展', plan:'全展區通票 ｜ 共用入場名額',
+          sessions:['10:00','13:00','16:00'], unit:'入場', dims:['票種'],
+          skus:[
+            {id:1,name:'成人',avail:500},
+            {id:2,name:'學生',avail:500},
+            {id:3,name:'兒童',avail:500},
+          ]
+        },
+        unlimited:{   // 無限量：eSIM，僅管理上下架
+          title:'日本 eSIM 上網方案', plan:'多流量方案 ｜ 高速上網',
+          sessions:['_'], noSess:true, unit:'', dims:['流量','天數'],
+          skus:[
+            {id:1,name:'每日1GB × 5日',avail:9999},
+            {id:2,name:'每日1GB × 8日',avail:9999},
+            {id:3,name:'每日3GB × 5日',avail:9999},
+            {id:4,name:'每日3GB × 8日',avail:9999},
+            {id:5,name:'吃到飽 × 5日',avail:9999},
+            {id:6,name:'吃到飽 × 8日',avail:9999},
+          ]
+        },
+      },
+      modes:[
+        {key:'ind_ind',label:'日期獨立 × SKU獨立',dateShared:false,skuShared:false,unlimited:false,desc:'每個日期規格獨立設定庫存，且每個 SKU 可各自設定數量。彈性最高。'},
+        {key:'ind_shared',label:'日期獨立 × SKU共用',dateShared:false,skuShared:true,unlimited:false,desc:'每個日期規格獨立設定庫存，但同日所有 SKU 共用同一份數量。'},
+        {key:'shared_ind',label:'日期共用 × SKU獨立',dateShared:true,skuShared:false,unlimited:false,desc:'所有日期共用同一份庫存，但不同 SKU 可各自設定數量。'},
+        {key:'shared_shared',label:'日期共用 × SKU共用',dateShared:true,skuShared:true,unlimited:false,desc:'所有日期、所有 SKU 共用同一個總量，一次設定即套用全部。'},
+        {key:'unlimited',label:'無限量庫存',dateShared:false,skuShared:false,unlimited:true,desc:'不限制庫存數量，僅管理上下架狀態。'},
+      ],
+    };
+  },
+  created(){
+    this.loadMode('ind_ind');   // 載入預設模式的商品內容 + 種子庫存
+    // month list for scroll-spy (12月 → 隔年 5月，共 6 個月)
+    const ml=[]; let yy=2025, mm=12;
+    for(let i=0;i<6;i++){ ml.push({y:yy,m:mm}); mm++; if(mm>12){mm=1;yy++;} }
+    this.monthsList = ml;
+  },
+  mounted(){ this.$nextTick(()=>this.onPanelScroll()); },
+  updated(){ this.onPanelScroll(); },
+  computed:{
+    currentMode(){ return this.modes.find(m=>m.key===this.modeKey); },
+    showStockNum(){ return !this.currentMode.dateShared && !this.currentMode.unlimited; },
+    editDk(){ return this.currentMode.dateShared ? 'ALLDATES' : (this.selected[0] || null); },
+    sessOptions(){ return this.sessions.map(s=>({ value:s, label:this.sessTitle(s) })); },
+    // 場次範圍＝篩選列界定（filterSessFrom/To）；預設 null → 全部場次
+    batchSessions(){
+      if(this.noSess || !this.sessions.length) return this.sessions;
+      let i=this.sessions.indexOf(this.filterSessFrom), j=this.sessions.indexOf(this.filterSessTo);
+      if(i<0) i=0; if(j<0) j=this.sessions.length-1;
+      if(i>j){ const t=i; i=j; j=t; }
+      return this.sessions.slice(i, j+1);
+    },
+    scopeSessions(){ return this.batchSessions; },
+    // 篩選＝界定編輯範圍：visibleSkus 即時由 fDims 算（維度沒選=不限制；全沒選=全部 SKU）
+    visibleSkus(){
+      const anySel = this.dims.some(d=> (this.fDims[d.idx]||[]).length);
+      if(!anySel) return this.skus;
+      return this.skus.filter(s=>{ const p=this.parts(s.name);
+        return this.dims.every(d=>{ const sel=this.fDims[d.idx]||[]; return !sel.length || sel.includes(p[d.idx]); });
+      });
+    },
+    // 收合篩選列每個維度要顯示的字（已選值或「全部」）
+    scopeDimText(){ const m={}; this.dims.forEach(d=>{ const sel=this.fDims[d.idx]||[]; m[d.idx]= sel.length ? d.values.filter(v=>sel.includes(v)).join('、') : '全部'; }); return m; },
+    scopeSessText(){
+      if(this.noSess || !this.sessions.length) return '';
+      const ss=this.sessions, i=ss.indexOf(this.filterSessFrom), j=ss.indexOf(this.filterSessTo);
+      if((i<=0||this.filterSessFrom==null) && (j<0||this.filterSessTo==null||j===ss.length-1)) return '全部';
+      const a=i<0?0:i, b=j<0?ss.length-1:j; return a===b ? ss[a] : ss[a]+'–'+ss[b];
+    },
+    // 展開中草稿的預覽：符合的 SKU / 場次數（即時更新，但未提交）
+    draftSkus(){
+      const anySel = this.dims.some(d=> (this.fDimsDraft[d.idx]||[]).length);
+      if(!anySel) return this.skus;
+      return this.skus.filter(s=>{ const p=this.parts(s.name);
+        return this.dims.every(d=>{ const sel=this.fDimsDraft[d.idx]||[]; return !sel.length || sel.includes(p[d.idx]); });
+      });
+    },
+    draftSessions(){
+      if(this.noSess || !this.sessions.length) return this.sessions;
+      let i=this.sessions.indexOf(this.draftSessFrom), j=this.sessions.indexOf(this.draftSessTo);
+      if(i<0)i=0; if(j<0)j=this.sessions.length-1; if(i>j){const t=i;i=j;j=t;}
+      return this.sessions.slice(i,j+1);
+    },
+    // 右側 panel 的「範圍」列：永遠顯示實際場次區間（09:00-13:00），非「全部」
+    scopeSessRange(){
+      if(this.noSess || !this.sessions.length) return '';
+      const a=this.filterSessFrom||this.sessions[0], b=this.filterSessTo||this.sessions[this.sessions.length-1];
+      return a===b ? a : a+'-'+b;
+    },
+    // SKU 共用時所有 SKU 共用一份數量 → 加總/狀態只算一個代表 SKU，避免 ×SKU 數重複計算
+    aggSkus(){ return this.currentMode.skuShared ? this.visibleSkus.slice(0,1) : this.visibleSkus; },
+    dims(){
+      const n = this.skus.reduce((mx,s)=>Math.max(mx,this.parts(s.name).length),0);
+      const out=[];
+      for(let i=0;i<n;i++){
+        const vals=[...new Set(this.skus.map(s=>this.parts(s.name)[i]).filter(v=>v!=null))];
+        out.push({ idx:i, label:this.dimLabels[i] || ('維度 '+(i+1)), values:vals });
+      }
+      return out;
+    },
+    fResult(){
+      // 完全沒選任何維度值 → 0 個（錯誤態）；否則：有選值的維度才篩，沒選的維度不限制
+      const anySel = this.dims.some(d=> (this.fDims[d.idx]||[]).length);
+      if(!anySel) return [];
+      return this.skus.filter(s=>{ const p=this.parts(s.name);
+        for(const d of this.dims){ const sel=this.fDims[d.idx]||[]; if(sel.length && !sel.includes(p[d.idx])) return false; }
+        return !this.fExclude.includes(s.id);
+      });
+    },
+    visibleMonths(){
+      const n = this.viewM===12 ? {y:this.viewY+1,m:1} : {y:this.viewY,m:this.viewM+1};
+      return [{y:this.viewY,m:this.viewM}, n];
+    },
+    monthLabel(){ return this.viewY+' 年 '+this.viewM+' 月'; },
+    weekDates(){
+      const out=[]; let dt=dayjs(this.weekStart);
+      for(let i=0;i<7;i++){ out.push(dt.format('YYYY-MM-DD')); dt=dt.add(1,'day'); }
+      return out;
+    },
+    selContiguous(){
+      if(this.selected.length<=1) return true;
+      for(let i=1;i<this.selected.length;i++){ if(dayjs(this.selected[i]).diff(dayjs(this.selected[i-1]),'day')!==1) return false; }
+      return true;
+    },
+    // 錨點日期 chip 文案：單日=MM-DD；連續=起→迄；區間+平日/週末=起→迄 平日/週末；跨年顯示完整日期；分散(Cmd)=最早 等 N 個日期
+    anchorDateLabel(){
+      // 區間模式(含平日/週末篩選)：以「選的區間」為準，後面空白接模式（記意圖，不受篩完散點影響）
+      if(this.rangeActive){
+        const a=this.rangeStart, b=this.rangeEnd;
+        const cross = a.slice(0,4)!==b.slice(0,4);
+        const f = dk => cross ? dk : dk.slice(5);
+        if(a===b) return f(a);
+        const base = f(a)+' → '+f(b);
+        if(this.dateMode==='weekday') return base+' 平日';
+        if(this.dateMode==='weekend') return base+' 週末';
+        return base;
+      }
+      const s=this.selected.slice().sort();
+      if(!s.length) return '選擇日期';
+      const first=s[0], last=s[s.length-1];
+      const crossYear = first.slice(0,4)!==last.slice(0,4);
+      const fmt = dk => crossYear ? dk : dk.slice(5);
+      if(s.length===1) return fmt(first);
+      if(this.selContiguous) return fmt(first)+' → '+fmt(last);
+      return fmt(first)+' 等 '+s.length+' 個日期';
+    },
+    // 區間模式時日期欄顯示的是「選的範圍(rangeStart→rangeEnd)」而非篩選後的散點；否則沿用 selected 起訖
+    rangeValue(){
+      if(this.rangeStart && this.rangeEnd) return [dayjs(this.rangeStart), dayjs(this.rangeEnd)];
+      return this.selected.length ? [dayjs(this.selected[0]), dayjs(this.selected[this.selected.length-1])] : null;
+    },
+    rangeActive(){ return !!(this.rangeStart && this.rangeEnd); },
+    // 平日/週末 segmented 只在「連續區間 且 該區間同時含平日與週末」時出現（依設計稿 3717：單日/未橫跨→不顯示）
+    showDateSeg(){
+      if(!(this.rangeStart && this.rangeEnd && this.rangeStart!==this.rangeEnd)) return false;
+      let wd=false, we=false;
+      this.rangeDays().forEach(d=>{ this.dayType(d)==='weekend' ? (we=true) : (wd=true); });
+      return wd && we;
+    },
+    defPick(){ const a=this.monthsList[0]||{y:2025,m:12}; const d=dayjs(a.y+'-'+String(a.m).padStart(2,'0')+'-01'); return [d,d]; },
+    modeSummary(){
+      const m=this.modes.find(x=>x.key===this.draftMode);
+      return {
+        unlimited:m.unlimited,
+        type:m.unlimited?'無限量庫存':'有限量庫存',
+        typeDesc:m.unlimited?'不限供應，僅需管理上下架狀態':'有限供應，需設定庫存數量',
+        date:m.dateShared?'日期共用設定庫存':'日期獨立設定庫存',
+        dateDesc:m.dateShared?'所有日期共用同一份庫存配額':'每個日期都可以獨立設定其庫存數量',
+        sku:m.skuShared?'SKU 共用設定庫存':'SKU 獨立設定庫存',
+        skuDesc:m.skuShared?'所有 SKU 共用同一份配額':'每個 SKU 有各自的庫存配額',
+      };
+    },
+  },
+  methods:{
+    toast(msg){ try{ antd.message.success(msg); }catch(e){} },
+    // 批次回饋的精簡 scope：日期 × SKU（× 場次），共用模式顯示「所有…」，場次只在有場次時出現、單一場次只顯示一個時間
+    batchScopeText(dates, ids, ses){
+      const dTxt = this.currentMode.dateShared ? '所有日期' : (dates.length+' 個日期');
+      const kTxt = this.currentMode.skuShared ? '所有 SKU' : (ids.length+' 個 SKU');
+      const sTxt = this.noSess ? '' : ('、'+(ses.length>1 ? (ses[0]+'–'+ses[ses.length-1]+(this.sessUnit?(' '+this.sessUnit):'')) : this.sessTitle(ses[0])));
+      return dTxt+'、'+kTxt+sTxt;
+    },
+    // 錨點標籤：偵測日期/SKU 欄位是否被捲到 sticky 區上方；是→顯示對應 chip
+    onPanelScroll(){
+      const p=this.$refs.panelEl; if(!p) return;
+      const tabs=p.querySelector('.panel-tabs'); const tabsH=tabs?tabs.offsetHeight:80;
+      this.anchorsTop=tabsH;
+      // 遮蓋線＝tabs 底（不含 chip 高度）；用「扣掉 chip 推擠後的真實頂端位置」判斷，去掉「chip 出現→推內容→又改變判斷」的循環
+      const anchors=p.querySelector('.panel-anchors');
+      const chipsH=(anchors && !anchors.classList.contains('hide')) ? anchors.offsetHeight : 0;
+      const coverLine=p.getBoundingClientRect().top + tabsH;
+      const dz=p.querySelector('.date-sec');
+      // 日期欄位「若沒有 chip 推擠時的頂端」被捲到 tabs 底之上才釘；靜止(未捲動)時欄位緊貼 tabs 底＝不釘
+      this.showDateChip = !!dz && (dz.getBoundingClientRect().top - chipsH) < (coverLine - 2);
+    },
+    jumpTo(){
+      const p=this.$refs.panelEl; if(!p) return;
+      // 日期 chip → 捲回日期欄位 + 展開日期選擇器
+      const el=p.querySelector('.date-sec'); if(!el) return;
+      const tabs=p.querySelector('.panel-tabs'); const anchors=p.querySelector('.panel-anchors');
+      const off=(tabs?tabs.offsetHeight:72)+(anchors?anchors.offsetHeight:0)+12;
+      p.scrollTo({ top: p.scrollTop + el.getBoundingClientRect().top - p.getBoundingClientRect().top - off, behavior:'smooth' });
+      setTimeout(()=>{
+        if(this.selContiguous){ this.dateOpen=true; }  // 連續多日：展開 RangePicker 日曆下拉
+        else {
+          // 分散多日：只 highlight「已選取 N 個日期」那個灰色區塊（.date-tags），非整個日期區（依設計稿 3549-218707）
+          const box=p.querySelector('.date-tags'); if(!box) return;
+          box.classList.remove('anchor-flash'); void box.offsetWidth; box.classList.add('anchor-flash'); clearTimeout(this._af); this._af=setTimeout(()=>box.classList.remove('anchor-flash'),1300);
+        }
+      }, 340);
+    },
+    // ---- date helpers ----
+    dk(y,m,d){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); },
+    cellsFor(y,m){
+      const out=[]; const first=dayjs(y+'-'+String(m).padStart(2,'0')+'-01');
+      const lead=(first.day()+6)%7; const dim=first.daysInMonth();
+      for(let i=0;i<lead;i++) out.push({dk:null,day:null});
+      for(let d=1;d<=dim;d++) out.push({dk:this.dk(y,m,d), day:d});
+      while(out.length%7!==0) out.push({dk:null,day:null});
+      return out;
+    },
+    // 氣泡翻轉：依「該格在可視區(cal-area)的實際位置」判斷——下方空間不足(例如被捲到底部切一半)就往上開；上方也不夠才維持往下
+    positionJit(){
+      const cont=this.$refs.calArea; const cell=cont && cont.querySelector('.cal-cell.jittip');
+      if(!cont || !cell){ this.jitUp=false; return; }
+      const cr=cell.getBoundingClientRect(), ar=cont.getBoundingClientRect(), need=100;
+      const below=ar.bottom-cr.bottom, above=cr.top-ar.top;
+      this.jitUp = (below < need) && (above >= need);
+    },
+    // ---- month / week navigation ----
+    scrollToMonth(y,m){
+      const cont=this.$refs.calArea; if(!cont) return;
+      const card=cont.querySelector('[data-ym="'+y+'-'+m+'"]');
+      if(card) cont.scrollTop = card.offsetTop - 8;
+    },
+    onCalScroll(e){
+      // scroll-spy：工具列月份跟著目前捲到頂端的月份變動
+      const cont=e.target; const top=cont.getBoundingClientRect().top;
+      const cards=cont.querySelectorAll('.month-card'); let cur=null;
+      cards.forEach(c=>{ if(c.getBoundingClientRect().top - top <= 24) cur=c; });
+      if(cur){ const p=cur.getAttribute('data-ym').split('-'); this.viewY=+p[0]; this.viewM=+p[1]; }
+    },
+    prevMonth(){
+      const i=this.monthsList.findIndex(x=>x.y===this.viewY && x.m===this.viewM);
+      if(i>0){ const mo=this.monthsList[i-1]; this.viewY=mo.y; this.viewM=mo.m; this.scrollToMonth(mo.y,mo.m); }
+    },
+    nextMonth(){
+      const i=this.monthsList.findIndex(x=>x.y===this.viewY && x.m===this.viewM);
+      if(i>=0 && i<this.monthsList.length-1){ const mo=this.monthsList[i+1]; this.viewY=mo.y; this.viewM=mo.m; this.scrollToMonth(mo.y,mo.m); }
+    },
+    goToday(){ this.calView='month'; this.weekStart='2025-12-01'; this.viewY=2025; this.viewM=12; this.$nextTick(()=>this.scrollToMonth(2025,12)); },
+    setView(v){ this.calView=v; },
+    toggleMonthMenu(){ this.monthMenuOpen=!this.monthMenuOpen; if(this.monthMenuOpen) this.menuYear=this.viewY; },
+    monthEnabled(y,m){ return this.monthsList.some(x=>x.y===y && x.m===m); },
+    // RangePicker 可選範圍＝左側月曆的 6 個月窗口（monthsList 首月1號 ~ 末月底），兩邊一致、外面的日期 disabled
+    disabledDate(current){
+      if(!current || !this.monthsList.length) return false;
+      const a=this.monthsList[0], b=this.monthsList[this.monthsList.length-1];
+      const lo=dayjs(a.y+'-'+String(a.m).padStart(2,'0')+'-01');
+      const hi=dayjs(b.y+'-'+String(b.m).padStart(2,'0')+'-01').endOf('month');
+      return current.isBefore(lo,'day') || current.isAfter(hi,'day');
+    },
+    selectMonth(y,m){ this.monthMenuOpen=false; this.calView='month'; this.viewY=y; this.viewM=m; this.$nextTick(()=>this.scrollToMonth(y,m)); },
+    weekPrev(){ this.weekStart=dayjs(this.weekStart).subtract(7,'day').format('YYYY-MM-DD'); },
+    weekNext(){ this.weekStart=dayjs(this.weekStart).add(7,'day').format('YYYY-MM-DD'); },
+    // ---- SKU 維度篩選（導覽時長 × 適用園區 × 票種）----
+    parts(name){ return name.split(' × '); },
+    // ---- 依模式載入商品內容 + 重新種子庫存 ----
+    loadMode(key){
+      const c=this.modeContent[key]; if(!c) return;
+      this.modeKey=key;
+      this.prodTitle=c.title; this.prodPlan=c.plan;
+      this.sessions=c.sessions.slice(); this.sessUnit=c.unit; this.noSess=!!c.noSess;
+      this.dimLabels=c.dims.slice();
+      this.skus=c.skus.map(s=>({...s}));
+      this.activeSkus=null; this.fExpanded=false; this.fDims={}; this.fExclude=[]; this.showScopeSkus=false;
+      // 有場次的商品：篩選場次預設帶入「最早→最晚」(全部場次)
+      this.filterSessFrom = this.noSess ? null : this.sessions[0];
+      this.filterSessTo   = this.noSess ? null : this.sessions[this.sessions.length-1];
+      this.sessClosed={}; this.editKey=null; this.batchSkus=[];
+      this.dayBatch=false; this.statBatch=false;
+      this.batchSessFrom=this.sessions[0]; this.batchSessTo=this.sessions[this.sessions.length-1];
+      this.seedStock();
+    },
+    seedStock(){
+      this.stock={}; this.online={};
+      const y=2025,m=12, ids=this.skus.map(s=>s.id);
+      for(let d=1; d<=31; d++){ const dk=this.dk(y,m,d);
+        this.sessions.forEach(se=> this.skus.forEach(s=>{ const kk=dk+'_'+se+'_'+s.id; this.stock[kk]=s.avail; this.online[kk]=true; }));
+      }
+      if(ids.includes(1)) [5,18].forEach(d=> this.sessions.forEach(se=> this.online[this.dk(y,m,d)+'_'+se+'_1']=false));
+      if(ids.includes(3)) [3,10,18].forEach(d=> this.sessions.forEach(se=> this.stock[this.dk(y,m,d)+'_'+se+'_3']=Math.round(this.skus.find(s=>s.id===3).avail*0.03)));
+    },
+    sessTitle(se){ return this.sessUnit ? se+' '+this.sessUnit : se; },
+    // 套用才生效：展開=把已套用的 fDims 複製成草稿；編輯只動草稿；套用=提交、取消=丟棄
+    openFilter(){ this.fDimsDraft=JSON.parse(JSON.stringify(this.fDims)); this.draftSessFrom=this.filterSessFrom; this.draftSessTo=this.filterSessTo; this.showScopeSkus=false; this.fExpanded=true; },
+    toggleFilter(){ if(!this.fExpanded) this.openFilter(); },   // 展開時 header 不收合，只能靠 套用/取消
+    cancelFilter(){ this.fExpanded=false; },   // 丟棄草稿（fDims 不變）
+    applyFilter(){ this.fDims=JSON.parse(JSON.stringify(this.fDimsDraft)); this.filterSessFrom=this.draftSessFrom; this.filterSessTo=this.draftSessTo; this.fExpanded=false; },
+    // 編輯「草稿」（點值切換；整維度全選＝視為「全部」＝清空該維度）
+    toggleDim(idx,val){
+      const cur=this.fDimsDraft[idx]?this.fDimsDraft[idx].slice():[]; const i=cur.indexOf(val); i>=0?cur.splice(i,1):cur.push(val);
+      const dim=this.dims.find(d=>d.idx===idx);
+      this.fDimsDraft={...this.fDimsDraft,[idx]:(dim && cur.length===dim.values.length)?[]:cur};
+    },
+    setDimAll(idx){ this.fDimsDraft={...this.fDimsDraft,[idx]:[]}; },
+    resetFilter(){ this.fDimsDraft={}; this.draftSessFrom=this.noSess?null:this.sessions[0]; this.draftSessTo=this.noSess?null:this.sessions[this.sessions.length-1]; this.showScopeSkus=false; },
+    editScope(){ this.openFilter(); this.$nextTick(()=>{ const el=document.querySelector('.filter-row'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }); },
+    // ---- state accessors ----
+    k(d,se,id){ return d+'_'+se+'_'+id; },
+    getStock(d,se,id){ const v=this.stock[this.k(d,se,id)]; if(v!=null) return v; const s=this.skus.find(x=>x.id===id); return s?s.avail:0; },
+    isOn(d,se,id){ const v=this.online[this.k(d,se,id)]; return v==null?true:v; },
+    skuName(id){ const s=this.skus.find(x=>x.id===id); return s?s.name:''; },
+    // 月曆累加總數 = 目前篩選 SKU × 場次的 stock 即時加總（篩選/編輯都會連動）
+    dayNum(dk){ let t=0; this.aggSkus.forEach(s=> this.sessions.forEach(se=> t+=this.getStock(dk,se,s.id))); return t; },
+    singleSkuNum(dk){ const s=this.visibleSkus[0]; if(!s) return 0; let t=0; this.scopeSessions.forEach(se=> t+=this.getStock(dk,se,s.id)); return t; },
+    scopedDayNum(dk){ let t=0; this.aggSkus.forEach(s=> this.scopeSessions.forEach(se=> t+=this.getStock(dk,se,s.id))); return t; },
+    // ---- calendar badge from live data（依目前篩選的 SKU 計算）----
+    badgeOf(dk){
+      const list=this.aggSkus;
+      if(this.currentMode.unlimited){
+        let off=0,tot=0; this.sessions.forEach(se=>list.forEach(s=>{tot++; if(!this.isOn(dk,se,s.id))off++;}));
+        return { warn:false, off: off>0 && off<tot, alloff: tot>0 && off===tot };
+      }
+      let off=0,tot=0,low=false;
+      this.sessions.forEach(se=>list.forEach(s=>{
+        tot++; if(!this.isOn(dk,se,s.id))off++; if(this.getStock(dk,se,s.id) < s.avail*0.1) low=true;
+      }));
+      return { warn: this.showWarn && low, off: off>0 && off<tot, alloff: tot>0 && off===tot };
+    },
+    seasonOf(dk){ if(!dk) return null; return this.seasons.find(x=> dk>=x.s && dk<=x.e) || null; },
+    weekSkuOnline(dk,id){ let on=0,tot=0; this.sessions.forEach(se=>{tot++; if(this.isOn(dk,se,id))on++;}); return on===tot?'上架中':(on===0?'全下架':'部分下架'); },
+    weekCellTotal(dk,id){ let t=0; this.sessions.forEach(se=> t+=this.getStock(dk,se,id)); return t; },
+    weekDayTotal(dk){ let t=0; this.aggSkus.forEach(s=> t+=this.weekCellTotal(dk,s.id)); return t; },
+    isWeekendDk(dk){ const d=dayjs(dk).day(); return d===0||d===6; },
+    dayNumOf(dk){ return String(dayjs(dk).date()).padStart(2,'0'); },
+    // ---- date selection (plain / cmd|ctrl multi / shift range) ----
+    isSelected(d){ return this.selected.includes(d); },
+    cellClick(c,ev){ if(c && c.dk){ ev.stopPropagation(); this.clickDay(c.dk,ev); } },
+    clickDay(dk,ev){
+      ev = ev || {};
+      const wasEmpty = this.selected.length===0;
+      const multi = !!(ev.metaKey || ev.ctrlKey || (ev.shiftKey && this.selected.length));
+      this.dayBatch=false; this.editKey=null;
+      if(ev.metaKey || ev.ctrlKey){
+        this.rangeStart=null; this.rangeEnd=null; this.dateMode='all';   // 分散多選：非區間
+        const i=this.selected.indexOf(dk); i>=0 ? this.selected.splice(i,1) : this.selected.push(dk);
+      } else if(ev.shiftKey && this.selected.length){
+        const a=this.selected[this.selected.length-1];
+        const lo=a<dk?a:dk, hi=a<dk?dk:a;
+        this.rangeStart=lo; this.rangeEnd=hi; this.dateMode='all'; this.applyRangeMode();   // 連續區間：記起訖、預設全部
+      } else {
+        this.rangeStart=null; this.rangeEnd=null; this.dateMode='all';   // 單點：非區間
+        this.selected = (this.selected.length===1 && this.selected[0]===dk) ? [] : [dk];
+      }
+      this.selected.sort();
+      // just-in-time 多選提示：從「沒選」開始選到單日時冒出一次（幾秒淡掉）；用過多選＝已學會→永不再提示
+      if(multi){ this.jitVisible=false; this.jitDone=true; }
+      else if(!this.jitDone && wasEmpty && this.selected.length===1){
+        this.jitVisible=true; this.$nextTick(()=>this.positionJit());   // 量可視區空間決定上/下開
+        clearTimeout(this._jitT); this._jitT=setTimeout(()=>{ this.jitVisible=false; }, 5000);
+      } else { this.jitVisible=false; }
+    },
+    onRange(dates){
+      if(!dates || !dates[0] || !dates[1]){ this.clearSel(); return; }
+      const lo=dates[0].format('YYYY-MM-DD'), hi=dates[1].format('YYYY-MM-DD');
+      this.rangeStart=lo; this.rangeEnd=hi; this.dateMode='all'; this.applyRangeMode();
+      this.dayBatch=false; this.editKey=null; this.dateOpen=false;
+      this.viewY=dates[0].year(); this.viewM=dates[0].month()+1;
+      this.$nextTick(()=>this.scrollToMonth(this.viewY, this.viewM));   // 左側月曆捲到所選範圍的起始月
+    },
+    // ---- 平日/週末 區間篩選 ----
+    dayType(dk){ const w=dayjs(dk).day(); return (w===0 || w===6) ? 'weekend' : 'weekday'; },   // 0=日 6=六
+    rangeDays(){ const out=[]; if(!this.rangeStart||!this.rangeEnd) return out; let dt=dayjs(this.rangeStart); while(dt.format('YYYY-MM-DD')<=this.rangeEnd){ out.push(dt.format('YYYY-MM-DD')); dt=dt.add(1,'day'); } return out; },
+    applyRangeMode(){   // 依 dateMode 從區間算出實際選取日（月曆高亮/批次對象）
+      const days=this.rangeDays();
+      this.selected = (this.dateMode==='all') ? days.slice() : days.filter(d=>this.dayType(d)===this.dateMode);
+      this.selected.sort();
+    },
+    setDateMode(m){ this.dateMode=m; this.applyRangeMode(); },
+    toggleDay(dk){ const i=this.selected.indexOf(dk); i>=0 ? this.selected.splice(i,1) : this.selected.push(dk); this.selected.sort(); },
+    clearSel(){ this.selected=[]; this.rangeStart=null; this.rangeEnd=null; this.dateMode='all'; this.dayBatch=false; this.statBatch=false; this.editKey=null; this.jitVisible=false; },
+    fmt(dk){ return dk; },
+    fmtShort(dk){ return dk ? dk.slice(5).replace('-','/') : ''; },
+    // ---- single-day inline stock edit ----
+    startEdit(d,se,id){ this.editKey=this.k(d,se,id); this.editVal=this.getStock(d,se,id); },
+    cancelEdit(){ this.editKey=null; },
+    saveEdit(d,se,id){
+      const nv=Math.max(0, parseInt(this.editVal,10)||0);
+      const old=this.getStock(d,se,id);
+      if(this.currentMode.skuShared){ // one value -> all visible SKUs in this session
+        this.visibleSkus.forEach(s=> this.stock[this.k(d,se,s.id)]=nv );
+        this.toast('已更新 所有 SKU 庫存為 '+nv);
+      } else {
+        this.stock[this.k(d,se,id)]=nv;
+        this.toast('已更新 '+this.skuName(id)+' 庫存為 '+nv);
+      }
+      this.editKey=null;
+      this.flashCard(this.k(d,se,id), old);   // 單一 SKU：卡片高亮＋顯示原值
+    },
+    // ---- 操作後回饋 ----
+    flashCard(key, from){ this.flashKeys=[key]; this.flashFrom=from; this.flashFromKey=key; clearTimeout(this._ft); this._ft=setTimeout(()=>{ this.flashKeys=[]; this.flashFrom=null; this.flashFromKey=null; }, 1800); },
+    flashCards(keys){ this.flashKeys=keys.slice(); this.flashFrom=null; this.flashFromKey=null; clearTimeout(this._ft); this._ft=setTimeout(()=>{ this.flashKeys=[]; }, 1800); },
+    flashCells(dates){ const ds=dates.filter(d=>d && d!=='ALLDATES'); this.flashDates=ds; clearTimeout(this._fc); this._fc=setTimeout(()=>{ this.flashDates=[]; }, 1800); },
+    // 批次回饋：單日(含日期共用)→高亮被改的 SKU 卡；多日→高亮日期格
+    flashBatch(dates, ses, ids){
+      if(dates.length===1){ const keys=[]; dates.forEach(d=>ses.forEach(se=>ids.forEach(id=>keys.push(this.k(d,se,id))))); this.flashCards(keys); }
+      else { this.flashCells(dates); }
+    },
+    // ---- single-day status toggles ----
+    toggleSku(d,se,id,on){
+      if(this.currentMode.skuShared){ this.skus.forEach(s=>this.online[this.k(d,se,s.id)]=on); this.toast('所有 SKU 已'+(on?'上架':'下架')); }
+      else { this.online[this.k(d,se,id)]=on; this.toast(this.skuName(id)+' 已'+(on?'上架':'下架')); }
+    },
+    // 場次底下實際呈現/連動的 SKU 清單（共用模式＝單一代表列；獨立模式＝篩選範圍內各 SKU）
+    sessSkus(){ return this.currentMode.skuShared ? this.visibleSkus.slice(0,1) : this.visibleSkus; },
+    // 場次層級可售狀態三態：'on'(全上架) / 'off'(全下架) / 'partial'(部分)——供 header switch 與「部分下架」標籤連動
+    sessionState(d,se){
+      const list=this.sessSkus(); if(!list.length) return 'off';
+      const ons=list.filter(s=>this.isOn(d,se,s.id)).length;
+      return ons===0 ? 'off' : (ons===list.length ? 'on' : 'partial');
+    },
+    // header switch 只在「全上架」時亮（partial/off 皆為未勾）；點擊＝批次套用到整個場次（沿用核選框 indeterminate 慣例：partial→點一下全部上架）
+    sessionMaster(d,se){ return this.sessionState(d,se)==='on'; },
+    toggleSession(d,se,on){
+      const list = this.currentMode.skuShared ? this.skus : this.visibleSkus;   // 共用→整池；獨立→篩選範圍，與 sessionState/toggleSku 一致
+      list.forEach(s=>this.online[this.k(d,se,s.id)]=on);
+      this.toast(this.sessTitle(se)+' 場次已'+(on?'上架':'下架')+'：'+(this.currentMode.skuShared ? '所有 SKU' : list.length+' 個 SKU'));
+    },
+    toggleSess(se){ this.sessClosed[se]=!this.sessClosed[se]; },
+    // ---- batch apply ----
+    // 調整庫存批次：日期共用寫入共用鍵 ALLDATES；否則寫入選取日期
+    targetDates(){ return this.currentMode.dateShared ? ['ALLDATES'] : this.selected.slice(); },
+    // 批次範圍內是否含「下架中」項目（任一 日期 × 場次 × SKU 為下架）→ 多日批次彙總提示用
+    scopeHasOffline(){
+      const dates=this.targetDates(), ids=this.visibleSkus.map(s=>s.id);
+      return dates.some(d=> this.batchSessions.some(se=> ids.some(id=> !this.isOn(d,se,id))));
+    },
+    targetSkus(){ return this.visibleSkus.map(s=>s.id); },   // 範圍＝上方篩選界定的 SKU
+    applyBatchStock(){
+      // SKU 共用模式：數量套到共用池＝全部 SKU（非上方篩選的子集）；獨立模式才用篩選範圍
+      const dates=this.targetDates(), ids=this.currentMode.skuShared?this.skus.map(s=>s.id):this.targetSkus(); const n=parseInt(this.batchQtyVal,10);
+      if(!ids.length || isNaN(n)) return;   // 保險：必填未填時「批次套用」已 disabled，正常走不到這
+      dates.forEach(d=>{ this.batchSessions.forEach(se=> ids.forEach(id=>{
+        const o=this.getStock(d,se,id); let nv=o;
+        if(this.batchQtyType==='total') nv=n; else if(this.batchQtyType==='add') nv=o+n; else nv=Math.max(0,o-n);
+        this.stock[this.k(d,se,id)]=nv;
+      })); });
+      this.toast('已更新庫存：'+this.batchScopeText(dates, ids, this.batchSessions));
+      this.batchQtyVal=''; this.dayBatch=false;
+      this.flashBatch(dates, this.batchSessions, ids);   // 單日→高亮SKU卡；多日→高亮日期格
+    },
+    applyBatchStatus(){
+      const dates=this.selected.slice(), ids=this.targetSkus(), ses=this.batchSessions; const on=this.batchStatus==='on';
+      if(!this.batchStatus || !ids.length) return;   // 保險：同上，按鈕已 disabled
+      dates.forEach(d=> ses.forEach(se=> ids.forEach(id=> this.online[this.k(d,se,id)]=on )));
+      this.toast('已'+(on?'上架':'下架')+'：'+this.batchScopeText(dates, ids, ses));
+      this.dayBatch=false; this.statBatch=false;
+      this.flashBatch(dates, ses, ids);   // 單日→高亮SKU卡；多日→高亮日期格
+    },
+    openSwitcher(){
+      const m=this.currentMode;
+      this.wType = m.unlimited?'unlimited':'limited';
+      this.wDate = m.dateShared?'shared':'ind';
+      this.wSku  = m.skuShared?'shared':'ind';
+      this.wizardStep=1; this.switcherOpen=true;
+    },
+    wizNext(){ this.wizardStep = this.wizardStep===1 ? (this.wType==='unlimited'?4:2) : Math.min(4,this.wizardStep+1); },
+    wizPrev(){ this.wizardStep = this.wizardStep===4 ? (this.wType==='unlimited'?1:3) : Math.max(1,this.wizardStep-1); },
+    applyWizard(){
+      this.loadMode(this.wType==='unlimited' ? 'unlimited' : (this.wDate+'_'+this.wSku));
+      this.switcherOpen=false; this.clearSel(); this.sharedFormOpen=false; this.batchSkus=[]; this.batchQtyVal='';
+      this.tab = this.currentMode.unlimited ? 'status' : 'adjust';
+      this.toast('已套用庫存模式設定');
+    },
+  },
+});
+app.component('icon', IconComp);
+app.component('sess-range', SessRange);
+app.component('shared-sku-note', SharedSkuNote);
+app.component('select-methods', SelectMethods);
+app.component('sku-picker', SkuPicker);
+app.component('qty-fields', QtyFields);
+app.component('scope-bar', ScopeBar);
+app.component('batch-preview', BatchPreview);
+app.use(antd);
+try{ antd.message.config({ top:'120px', duration:2 }); }catch(e){}
+app.mount('#app');
+</script>
+</body>
+</html>
