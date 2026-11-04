@@ -93,7 +93,7 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
 .scheme-link .sl-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .scheme-link .icon{flex-shrink:0;}
 /* 方案切換 dropdown menu */
-.ph-slim .ps-plan-dd{flex:1 0 0;min-width:0;display:flex;}
+.ph-slim .ps-plan-dd{flex:0 1 auto;min-width:0;display:flex;}  /* hug＋可縮：方案緊鄰商品名，不各搶一半 */
 .plan-menu .ant-dropdown-menu{max-width:560px;padding:4px;}
 .plan-menu .ant-dropdown-menu-item{font-size:14px;line-height:22px;white-space:normal;}
 /* ID／｜／方案名同色，與 header 的「ID｜名稱」一致，不特別變淡 */
@@ -115,11 +115,11 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
 /* 收合態 依設計稿 3753-229490：一列 px16/py4、gap16；[grow-wrapper(gap4): head(gap16,max600) ・ plan] + 更改庫存模式(small,r4) */
 .ph-slim{display:flex;align-items:center;gap:16px;background:#fff;padding:4px 16px;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
 .ph-slim .ps-main{flex:1 0 0;min-width:0;display:flex;align-items:center;gap:4px;min-height:32px;}  /* 依設計稿 3753-229490：內容列高 32（方案為 h32 的 Button Content），＋ph-slim py4×2＝整條 40 高 */
-.ph-slim .ps-head{flex:1 0 0;min-width:0;max-width:600px;display:flex;align-items:center;gap:16px;overflow:hidden;}
+.ph-slim .ps-head{flex:0 1 auto;min-width:0;max-width:50%;display:flex;align-items:center;gap:16px;overflow:hidden;}  /* 商品名 hug、最多半寬，超過在 50% 處截斷；短名稱時方案緊鄰其後 */
 .ph-slim .back{cursor:pointer;display:flex;color:#000;flex-shrink:0;}  /* 設計稿返回箭頭＝純黑 #000 */
-.ph-slim .ps-title{flex:1 0 0;min-width:0;font-size:14px;line-height:22px;font-weight:600;color:var(--colors-neutral-text-color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ph-slim .ps-title{flex:0 1 auto;min-width:0;font-size:14px;line-height:22px;font-weight:600;color:var(--colors-neutral-text-color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ph-slim .ps-sep{flex-shrink:0;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);}
-.ph-slim .ps-plan{flex:1 0 0;min-width:0;display:flex;align-items:center;gap:8px;color:var(--colors-base-blue-6);cursor:pointer;font-size:14px;line-height:22px;}
+.ph-slim .ps-plan{flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:8px;color:var(--colors-base-blue-6);cursor:pointer;font-size:14px;line-height:22px;}
 .ph-slim .ps-plan .pp-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ph-slim .ps-plan .icon{flex-shrink:0;}
 .ph-slim .ant-btn{flex-shrink:0;border-radius:var(--border-radius-sm);}
