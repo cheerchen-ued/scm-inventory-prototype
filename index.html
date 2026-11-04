@@ -100,6 +100,10 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
 /* 選中項：改成黑色＋粗體（覆蓋 AntD 預設主藍；AntD 樣式在 runtime 注入、同特異度時後者勝，故用 !important） */
 .plan-menu .ant-dropdown-menu-item-selected,
 .plan-menu .ant-dropdown-menu-item-selected .ant-dropdown-menu-title-content{color:var(--colors-neutral-text-color-text)!important;font-weight:600!important;}
+/* 跟隨游標的商品名 tooltip（自製，AntD 深色款樣式）；pointer-events:none 不擋滑鼠、transform 讓它在游標右下 */
+.cursor-tip{position:fixed;z-index:2000;pointer-events:none;transform:translate(14px,18px);max-width:520px;
+  background:rgba(0,0,0,.85);color:#fff;font-size:14px;line-height:22px;padding:6px 10px;border-radius:6px;
+  box-shadow:0 6px 16px rgba(0,0,0,.12);white-space:normal;word-break:break-all;}
 /* ===== header 捲動收合 ===== 月曆往下捲→商品標題+方案列收合成細 bar（麵包屑不動）。
    用 grid-template-rows 1fr↔0fr 做平滑收合：直接對到實際內容高度、沒有 max-height 的「空跑段」、兩邊對稱，不卡。
    完整區與 slim 區各包一層 grid wrapper，內層 overflow:hidden+min-height:0，再用 opacity 做輕量交叉淡入淡出。 */
@@ -591,7 +595,7 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
       <div class="ph-full"><div class="ph-full-in">
       <div class="ph-title-row">
         <span class="back"><icon name="arrow-left" :size="16"></icon></span>
-        <span class="ph-title" :title="prodId+'｜'+prodTitle">{{ prodId }}｜{{ prodTitle }}</span>
+        <span class="ph-title" @mouseenter="titleTipOn" @mouseleave="titleTipOff">{{ prodId }}｜{{ prodTitle }}</span>
       </div>
 
       <div class="ph-scheme-row">
@@ -616,7 +620,7 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
         <div class="ps-main">
           <div class="ps-head">
             <span class="back"><icon name="arrow-left" :size="16"></icon></span>
-            <span class="ps-title" :title="prodId+'｜'+prodTitle">{{ prodId }}｜{{ prodTitle }}</span>
+            <span class="ps-title" @mouseenter="titleTipOn" @mouseleave="titleTipOff">{{ prodId }}｜{{ prodTitle }}</span>
           </div>
           <span class="ps-sep">・</span>
           <a-dropdown :trigger="['click']" placement="bottomLeft" overlay-class-name="plan-menu" class="ps-plan-dd" :get-popup-container="getBody">
@@ -1081,6 +1085,8 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
     </div>
   </a-modal>
 
+  <!-- 跟隨游標的商品名 tooltip（只在截斷時出現，見 titleTipOn/truncd） -->
+  <div class="cursor-tip" v-if="tipShow" :style="{left:tipX+'px', top:tipY+'px'}">{{ tipText }}</div>
  </a-config-provider>
 </div>
 
@@ -1313,7 +1319,7 @@ const app = createApp({
       // 更改庫存模式 wizard
       wizardStep:1, wType:'limited', wDate:'ind', wSku:'ind',
       weekHead:['週一','週二','週三','週四','週五','週六','週日'],
-      sessions:[], sessUnit:'場次', noSess:false, prodTitle:'', prodPlan:'', prodId:'', planId:'', curPlans:[], dimLabels:[],
+      sessions:[], sessUnit:'場次', noSess:false, prodTitle:'', prodPlan:'', prodId:'', planId:'', curPlans:[], tipShow:false, tipX:0, tipY:0, tipText:'', dimLabels:[],
       // ---- reactive inventory state ----
       stock:{},      // key `${dk}_${se}_${id}` -> number
       online:{},     // key `${dk}_${se}_${id}` -> boolean
@@ -1871,6 +1877,10 @@ const app = createApp({
       if(p){ this.planId=p.id; this.prodPlan=p.name; }  // 切換方案：更新當前方案 ID＋名稱（同商品、庫存模式不變）
     },
     getBody(){ return document.body; },  // 方案 dropdown 掛到 body，避免被 header 列的 overflow:hidden（收合動畫用）裁掉
+    truncd(e){ const el=e&&e.currentTarget; return !!el && el.scrollWidth > el.clientWidth + 1; },  // 商品名 tooltip：只有真的被截斷（內容寬 > 可視寬）才回 true→顯示
+    // 商品名 tooltip：只在截斷時出現，於「進入當下的游標位置」顯示，之後定住不跟隨
+    titleTipOn(e){ if(this.truncd(e)){ this.tipText=this.prodId+'｜'+this.prodTitle; this.tipX=e.clientX; this.tipY=e.clientY; this.tipShow=true; } },
+    titleTipOff(){ this.tipShow=false; },
     openSwitcher(){
       const m=this.currentMode;
       this.wType = m.unlimited?'unlimited':'limited';
