@@ -79,16 +79,50 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
 .inv-page{padding:0;height:calc(100vh - 105px);display:flex;flex-direction:column;overflow:hidden;}
 
 /* ---------- page header (full-width white bands, border-b #f0f0f0) ---------- */
-.ph-title-row{display:flex;align-items:center;gap:16px;padding:24px 24px 12px;background:#fff;}
-.ph-title-row .back{cursor:pointer;display:flex;color:var(--colors-neutral-text-color-text);}
-.ph-title{font-size:20px;line-height:28px;font-weight:600;color:#000;}
-.ph-scheme-row{display:flex;flex-wrap:wrap;gap:8px 0;align-items:center;justify-content:space-between;
+/* 依設計稿 3263-100810：標題列＝← ＋「商品ID｜商品名」（ID 與名同色 #000e0），pt12/pb4+內距→16/8；back 用 tertiary */
+.ph-title-row{display:flex;align-items:center;gap:16px;padding:16px 24px 8px;background:#fff;}
+.ph-title-row .back{cursor:pointer;display:flex;color:#000;flex-shrink:0;}  /* 設計稿返回箭頭＝純黑 #000（非 tertiary） */
+.ph-title{font-size:20px;line-height:28px;font-weight:600;color:var(--colors-neutral-text-color-text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 方案列：當前方案：＋「方案ID｜方案名」(primary 藍，整串同色) ⌄ …… 更改庫存模式(default btn r6/px15/h32) */
+.ph-scheme-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;
   padding:8px 16px;background:#fff;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
-.ph-scheme{display:flex;align-items:center;gap:4px;height:32px;}
-.ph-scheme .lbl{color:var(--colors-neutral-text-color-text);}
-.ph-scheme .colon{padding:0 8px 0 2px;color:var(--colors-neutral-text-color-text);}
-.scheme-link{display:flex;align-items:center;gap:8px;height:32px;padding:0 15px;border-radius:var(--border-radius);
-  color:var(--colors-base-blue-6);cursor:pointer;}
+.ph-scheme{display:flex;align-items:center;gap:4px;height:32px;min-width:0;flex:1 0 0;font-size:14px;line-height:22px;}
+.ph-scheme .lbl{color:var(--colors-neutral-text-color-text);flex-shrink:0;}
+.ph-scheme .colon{padding:0 8px 0 2px;color:var(--colors-neutral-text-color-text);flex-shrink:0;}
+.scheme-link{display:flex;align-items:center;gap:8px;height:32px;color:var(--colors-base-blue-6);cursor:pointer;min-width:0;font-size:14px;line-height:22px;}
+.scheme-link .sl-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.scheme-link .icon{flex-shrink:0;}
+/* 方案切換 dropdown menu */
+.ph-slim .ps-plan-dd{flex:1 0 0;min-width:0;display:flex;}
+.plan-menu .ant-dropdown-menu{max-width:560px;padding:4px;}
+.plan-menu .ant-dropdown-menu-item{font-size:14px;line-height:22px;white-space:normal;}
+/* ID／｜／方案名同色，與 header 的「ID｜名稱」一致，不特別變淡 */
+/* 選中項：改成黑色＋粗體（覆蓋 AntD 預設主藍；AntD 樣式在 runtime 注入、同特異度時後者勝，故用 !important） */
+.plan-menu .ant-dropdown-menu-item-selected,
+.plan-menu .ant-dropdown-menu-item-selected .ant-dropdown-menu-title-content{color:var(--colors-neutral-text-color-text)!important;font-weight:600!important;}
+/* ===== header 捲動收合 ===== 月曆往下捲→商品標題+方案列收合成細 bar（麵包屑不動）。
+   用 grid-template-rows 1fr↔0fr 做平滑收合：直接對到實際內容高度、沒有 max-height 的「空跑段」、兩邊對稱，不卡。
+   完整區與 slim 區各包一層 grid wrapper，內層 overflow:hidden+min-height:0，再用 opacity 做輕量交叉淡入淡出。 */
+.ph-full,.ph-slimwrap{display:grid;transition:grid-template-rows .18s cubic-bezier(.4,0,.2,1);}
+.ph-full{grid-template-rows:1fr;}
+.ph-slimwrap{grid-template-rows:0fr;}
+.inv-page.hd-collapsed .ph-full{grid-template-rows:0fr;}
+.inv-page.hd-collapsed .ph-slimwrap{grid-template-rows:1fr;}
+.ph-full-in,.ph-slim-in{overflow:hidden;min-height:0;transition:opacity .13s ease;}
+.ph-slim-in{opacity:0;}
+.inv-page.hd-collapsed .ph-full-in{opacity:0;}
+.inv-page.hd-collapsed .ph-slim-in{opacity:1;}
+/* 收合態 依設計稿 3753-229490：一列 px16/py4、gap16；[grow-wrapper(gap4): head(gap16,max600) ・ plan] + 更改庫存模式(small,r4) */
+.ph-slim{display:flex;align-items:center;gap:16px;background:#fff;padding:4px 16px;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
+.ph-slim .ps-main{flex:1 0 0;min-width:0;display:flex;align-items:center;gap:4px;min-height:32px;}  /* 依設計稿 3753-229490：內容列高 32（方案為 h32 的 Button Content），＋ph-slim py4×2＝整條 40 高 */
+.ph-slim .ps-head{flex:1 0 0;min-width:0;max-width:600px;display:flex;align-items:center;gap:16px;overflow:hidden;}
+.ph-slim .back{cursor:pointer;display:flex;color:#000;flex-shrink:0;}  /* 設計稿返回箭頭＝純黑 #000 */
+.ph-slim .ps-title{flex:1 0 0;min-width:0;font-size:14px;line-height:22px;font-weight:600;color:var(--colors-neutral-text-color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ph-slim .ps-sep{flex-shrink:0;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);}
+.ph-slim .ps-plan{flex:1 0 0;min-width:0;display:flex;align-items:center;gap:8px;color:var(--colors-base-blue-6);cursor:pointer;font-size:14px;line-height:22px;}
+.ph-slim .ps-plan .pp-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ph-slim .ps-plan .icon{flex-shrink:0;}
+.ph-slim .ant-btn{flex-shrink:0;border-radius:var(--border-radius-sm);}
 
 /* filter row */
 .filter-row{display:flex;align-items:center;gap:8px;padding:8px 16px 9px;min-height:48px;background:#fff;cursor:pointer;
@@ -97,6 +131,7 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
 .filter-row.expanded{cursor:default;}
 .filter-row.expanded .flt-expand{color:var(--colors-neutral-text-color-text-tertiary);}  /* 展開時 header 不可點收合，只能靠 套用/取消 */
 .filter-row .flt-label{display:flex;align-items:center;gap:4px;color:#000;white-space:nowrap;}
+.filter-row .flt-label .icon{color:var(--colors-neutral-text-color-text-tertiary);}  /* 設計稿：篩選漏斗 icon＝tertiary rgba(0,0,0,.45)，文字維持黑 */
 /* 收合篩選列：各維度/場次的範圍 chip + 符合數 */
 .flt-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0;}
 /* 依設計稿 3672:694940：chip 底 fillQuaternary(0.02)+1px #d9d9d9 邊框、12px、label 0.45、值 Semibold 深色 */
@@ -200,11 +235,14 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
 .cal-col .filter-row,.cal-col .cal-toolbar{flex-shrink:0;}
 
 /* calendar: rounded month cards (own scroll container) */
-.cal-area{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;position:relative;}
+.cal-area{flex:1;min-width:0;min-height:0;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;position:relative;}
+.cal-area > .month-card:first-child{margin-top:16px;}  /* 頂部留白改由首月卡 margin 提供；cal-area 無上 padding→sticky 週表頭貼齊頂端、不露出下方格子 */
 .month-card{background:#fff;border:1px solid var(--colors-neutral-border-color-border-secondary);
-  border-radius:var(--border-radius-lg);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03);flex-shrink:0;}
+  border-radius:var(--border-radius-lg);box-shadow:0 1px 2px rgba(0,0,0,.03);flex-shrink:0;}  /* 不用 overflow:hidden（會擋住週表頭 sticky）；改用週表頭自身圓角 */
 .month-label{font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);margin-top:8px;flex-shrink:0;}
 .cal-weekhead,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);column-gap:8px;}
+/* 週表頭釘在月卡頂端：捲動該月時 週一…週日 一直可見（月卡 overflow:hidden，高月份內 sticky 有效） */
+.cal-weekhead{position:sticky;top:0;z-index:3;background:#fff;border-radius:var(--border-radius-lg) var(--border-radius-lg) 0 0;border-bottom:1px solid var(--colors-neutral-border-color-border-secondary);}
 .cal-weekhead > div{padding:12px 16px;font-size:14px;line-height:22px;color:var(--colors-neutral-text-color-text);}
 .cal-cell{min-height:140px;border-top:2px solid rgba(0,0,0,.06);padding:12px 16px;gap:4px;
   display:flex;flex-direction:column;cursor:pointer;position:relative;transition:background .12s;}
@@ -548,19 +586,51 @@ body{margin:0;background:#ecf0f6;color:var(--colors-neutral-text-color-text);
 
   <!-- ===== main ===== -->
   <div class="app-main">
-    <div class="inv-page">
+    <div class="inv-page" :class="{'hd-collapsed':hdCollapsed}">
+      <!-- 完整態：商品標題 + 方案列（月曆捲動時收合）；grid-rows 1fr→0fr 平滑收合，對到實際內容高、無 max-height 空跑段 -->
+      <div class="ph-full"><div class="ph-full-in">
       <div class="ph-title-row">
-        <span class="back"><icon name="arrow-left"></icon></span>
-        <span class="ph-title">{{ prodTitle }}</span>
+        <span class="back"><icon name="arrow-left" :size="16"></icon></span>
+        <span class="ph-title" :title="prodId+'｜'+prodTitle">{{ prodId }}｜{{ prodTitle }}</span>
       </div>
 
       <div class="ph-scheme-row">
         <div class="ph-scheme">
           <span class="lbl">當前方案</span><span class="colon">:</span>
-          <span class="scheme-link">{{ prodPlan }} <icon name="chevron-down" :size="16"></icon></span>
+          <a-dropdown :trigger="['click']" placement="bottomLeft" overlay-class-name="plan-menu" :get-popup-container="getBody">
+            <span class="scheme-link"><span class="sl-txt">{{ planId }}｜{{ prodPlan }}</span><icon name="chevron-down" :size="16"></icon></span>
+            <template #overlay>
+              <a-menu :selected-keys="[planId]" @click="pickPlan">
+                <a-menu-item v-for="p in curPlans" :key="p.id"><span class="pm-id">{{ p.id }}</span><span class="pm-sep">｜</span><span class="pm-name">{{ p.name }}</span></a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
         </div>
         <a-button @click="openSwitcher">更改庫存模式</a-button>
       </div>
+      </div></div><!-- /ph-full-in /ph-full -->
+
+      <!-- 收合態：一列 ← ID｜商品名 ・ 方案ID｜方案名 ⌄ 更改庫存模式；月曆捲動時出現 -->
+      <div class="ph-slimwrap"><div class="ph-slim-in">
+      <div class="ph-slim">
+        <div class="ps-main">
+          <div class="ps-head">
+            <span class="back"><icon name="arrow-left" :size="16"></icon></span>
+            <span class="ps-title" :title="prodId+'｜'+prodTitle">{{ prodId }}｜{{ prodTitle }}</span>
+          </div>
+          <span class="ps-sep">・</span>
+          <a-dropdown :trigger="['click']" placement="bottomLeft" overlay-class-name="plan-menu" class="ps-plan-dd" :get-popup-container="getBody">
+            <span class="ps-plan"><span class="pp-txt">{{ planId }}｜{{ prodPlan }}</span><icon name="chevron-down" :size="16"></icon></span>
+            <template #overlay>
+              <a-menu :selected-keys="[planId]" @click="pickPlan">
+                <a-menu-item v-for="p in curPlans" :key="p.id"><span class="pm-id">{{ p.id }}</span><span class="pm-sep">｜</span><span class="pm-name">{{ p.name }}</span></a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </div>
+        <a-button size="small" @click="openSwitcher">更改庫存模式</a-button>
+      </div>
+      </div></div><!-- /ph-slim-in /ph-slimwrap -->
 
       <div class="inv-body">
         <!-- 篩選列：全寬，橫跨月曆 + 右側 panel（界定編輯範圍；SKU/場次選擇統一在此，右側 panel 不再選）-->
@@ -1037,54 +1107,50 @@ dayjs.extend(dayjs_plugin_advancedFormat);dayjs.extend(dayjs_plugin_quarterOfYea
 const { createApp } = Vue;
 
 /* ---- feather-style icon set ---- */
-const P = {
-  'chevron-down':'<polyline points="6 9 12 15 18 9"/>',
-  'chevron-up':'<polyline points="18 15 12 9 6 15"/>',
-  'chevron-left':'<polyline points="15 18 9 12 15 6"/>',
-  'chevron-right':'<polyline points="9 18 15 12 9 6"/>',
-  'chevrons-left':'<polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/>',
-  'chevrons-right':'<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>',
-  'arrow-left':'<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
-  'home':'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
-  'search':'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
-  'edit':'<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
-  'calendar':'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-  'clock':'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
-  'globe':'<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
-  'book':'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
-  'info':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
-  'smartphone':'<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
-  'bell':'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
-  'bulb':'<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/>',
-  'eye':'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
-  'database':'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
-  'list':'<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
-  'filter':'<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
-  'x':'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
-  'check':'<polyline points="20 6 9 17 4 12"/>',
-  // rail glyphs reuse
-  'message':'<path d="M4 4h16v12H5.17L4 17.17z"/>','order':'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
-  'writeoff':'<rect x="3" y="5" width="18" height="14" rx="1"/><line x1="7" y1="9" x2="7" y2="15"/><line x1="11" y1="9" x2="11" y2="15"/><line x1="15" y1="9" x2="15" y2="15"/>',
-  'comment':'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-  'shopping':'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
-  'frequent':'<path d="M21 11.5a8.38 8.38 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 20l1-5a8.38 8.38 0 0 1 8-10.5 8.38 8.38 0 0 1 9 7z"/>',
-  'datacenter':'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
-  'report':'<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="9" y2="17"/><line x1="15" y1="7" x2="15" y2="17"/>',
-  'supplier':'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h3M15 12h3M5 16h14"/>',
-  'auth':'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
-  'otp':'<path d="M12 2 4 6v6c0 5 3.4 7.7 8 10 4.6-2.3 8-5 8-10V6z"/>',
-};
-// AntD 原生 outlined icons（填色、viewBox 1024）
-const PF = {
+const ICON = {
+  'arrow-left':'<path d="M872 474H286.9l350.2-304c5.6-4.9 2.2-14-5.2-14h-88.5c-3.9 0-7.6 1.4-10.5 3.9L155 487.8a31.96 31.96 0 0 0 0 48.3L535.1 866c1.5 1.3 3.3 2 5.2 2h91.5c7.4 0 10.8-9.2 5.2-14L286.9 550H872c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z"/>',
+  'chevron-down':'<path d="M884 256h-75c-5.1 0-9.9 2.5-12.9 6.6L512 654.2 227.9 262.6c-3-4.1-7.8-6.6-12.9-6.6h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z"/>',
+  'chevron-right':'<path d="M765.7 486.8L314.9 134.7A7.97 7.97 0 0 0 302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 0 0 0-50.4z"/>',
+  'chevrons-left':'<path d="M272.9 512l265.4-339.1c4.1-5.2.4-12.9-6.3-12.9h-77.3c-4.9 0-9.6 2.3-12.6 6.1L186.8 492.3a31.99 31.99 0 0 0 0 39.5l255.3 326.1c3 3.9 7.7 6.1 12.6 6.1H532c6.7 0 10.4-7.7 6.3-12.9L272.9 512zm304 0l265.4-339.1c4.1-5.2.4-12.9-6.3-12.9h-77.3c-4.9 0-9.6 2.3-12.6 6.1L490.8 492.3a31.99 31.99 0 0 0 0 39.5l255.3 326.1c3 3.9 7.7 6.1 12.6 6.1H836c6.7 0 10.4-7.7 6.3-12.9L576.9 512z"/>',
+  'chevrons-right':'<path d="M533.2 492.3L277.9 166.1c-3-3.9-7.7-6.1-12.6-6.1H188c-6.7 0-10.4 7.7-6.3 12.9L447.1 512 181.7 851.1A7.98 7.98 0 0 0 188 864h77.3c4.9 0 9.6-2.3 12.6-6.1l255.3-326.1c9.1-11.7 9.1-27.9 0-39.5zm304 0L581.9 166.1c-3-3.9-7.7-6.1-12.6-6.1H492c-6.7 0-10.4 7.7-6.3 12.9L751.1 512 485.7 851.1A7.98 7.98 0 0 0 492 864h77.3c4.9 0 9.6-2.3 12.6-6.1l255.3-326.1c9.1-11.7 9.1-27.9 0-39.5z"/>',
+  'filter':'<path d="M880.1 154H143.9c-24.5 0-39.8 26.7-27.5 48L349 597.4V838c0 17.7 14.2 32 31.8 32h262.4c17.6 0 31.8-14.3 31.8-32V597.4L907.7 202c12.2-21.3-3.1-48-27.6-48zM603.4 798H420.6V642h182.9v156zm9.6-236.6l-9.5 16.6h-183l-9.5-16.6L212.7 226h598.6L613 561.4z"/>',
+  'calendar':'<path d="M880 184H712v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H384v-64c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v64H144c-17.7 0-32 14.3-32 32v664c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V216c0-17.7-14.3-32-32-32zm-40 656H184V460h656v380zM184 392V256h128v48c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-48h256v48c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-48h128v136H184z"/>',
+  'check':'<path d="M912 190h-69.9c-9.8 0-19.1 4.5-25.1 12.2L404.7 724.5 207 474a32 32 0 0 0-25.1-12.2H112c-6.7 0-10.4 7.7-6.3 12.9l273.9 347c12.8 16.2 37.4 16.2 50.3 0l488.4-618.9c4.1-5.1.4-12.8-6.3-12.8z"/>',
+  'x':'<path d="M799.855 166.312c.023.007.043.018.084.059l57.69 57.69c.041.041.052.06.059.084a.118.118 0 0 1 0 .069c-.007.023-.018.042-.059.083L569.926 512l287.703 287.703c.041.04.052.06.059.083a.118.118 0 0 1 0 .07c-.007.022-.018.042-.059.083l-57.69 57.69c-.041.041-.06.052-.084.059a.118.118 0 0 1-.069 0c-.023-.007-.042-.018-.083-.059L512 569.926 224.297 857.629c-.04.041-.06.052-.083.059a.118.118 0 0 1-.07 0c-.022-.007-.042-.018-.083-.059l-57.69-57.69c-.041-.041-.052-.06-.059-.084a.118.118 0 0 1 0-.069c.007-.023.018-.042.059-.083L454.073 512 166.371 224.297c-.041-.04-.052-.06-.059-.083a.118.118 0 0 1 0-.07c.007-.022.018-.042.059-.083l57.69-57.69c.041-.041.06-.052.084-.059a.118.118 0 0 1 .069 0c.023.007.042.018.083.059L512 454.073l287.703-287.702c.04-.041.06-.052.083-.059a.118.118 0 0 1 .07 0Z"/>',
+  'info':'<path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"/><path d="M464 336a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm72 112h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V456c0-4.4-3.6-8-8-8z"/>',
+  'bulb':'<path d="M632 888H392c-4.4 0-8 3.6-8 8v32c0 17.7 14.3 32 32 32h192c17.7 0 32-14.3 32-32v-32c0-4.4-3.6-8-8-8zM512 64c-181.1 0-328 146.9-328 328 0 121.4 66 227.4 164 284.1V792c0 17.7 14.3 32 32 32h264c17.7 0 32-14.3 32-32V676.1c98-56.7 164-162.7 164-284.1 0-181.1-146.9-328-328-328zm127.9 549.8L604 634.6V752H420V634.6l-35.9-20.8C305.4 568.3 256 484.5 256 392c0-141.4 114.6-256 256-256s256 114.6 256 256c0 92.5-49.4 176.3-128.1 221.8z"/>',
+  'eye':'<path d="M942.2 486.2C847.4 286.5 704.1 186 512 186c-192.2 0-335.4 100.5-430.2 300.3a60.3 60.3 0 0 0 0 51.5C176.6 737.5 319.9 838 512 838c192.2 0 335.4-100.5 430.2-300.3 7.7-16.2 7.7-35 0-51.5zM512 766c-161.3 0-279.4-81.8-362.7-254C232.6 339.8 350.7 258 512 258c161.3 0 279.4 81.8 362.7 254C791.5 684.2 673.4 766 512 766zm-4-430c-97.2 0-176 78.8-176 176s78.8 176 176 176 176-78.8 176-176-78.8-176-176-176zm0 288c-61.9 0-112-50.1-112-112s50.1-112 112-112 112 50.1 112 112-50.1 112-112 112z"/>',
+  'edit':'<path d="M257.7 752c2 0 4-.2 6-.5L431.9 722c2-.4 3.9-1.3 5.3-2.8l423.9-423.9a9.96 9.96 0 0 0 0-14.1L694.9 114.9c-1.9-1.9-4.4-2.9-7.1-2.9s-5.2 1-7.1 2.9L256.8 538.8c-1.5 1.5-2.4 3.3-2.8 5.3l-29.5 168.2a33.5 33.5 0 0 0 9.4 29.8c6.6 6.4 14.9 9.9 23.8 9.9zm67.4-174.4L687.8 215l73.3 73.3-362.7 362.6-88.9 15.7 15.6-89zM880 836H144c-17.7 0-32 14.3-32 32v36c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-36c0-17.7-14.3-32-32-32z"/>',
+  'search':'<path d="M909.6 854.5L649.9 594.8C690.2 542.7 712 479 712 412c0-80.2-31.3-155.4-87.9-212.1-56.6-56.7-132-87.9-212.1-87.9s-155.5 31.3-212.1 87.9C143.2 256.5 112 331.8 112 412c0 80.1 31.3 155.5 87.9 212.1C256.5 680.8 331.8 712 412 712c67 0 130.6-21.8 182.7-62l259.7 259.6a8.2 8.2 0 0 0 11.6 0l43.6-43.5a8.2 8.2 0 0 0 0-11.6zM570.4 570.4C528 612.7 471.8 636 412 636s-116-23.3-158.4-65.6C211.3 528 188 471.8 188 412s23.3-116.1 65.6-158.4C296 211.3 352.2 188 412 188s116.1 23.2 158.4 65.6S636 352.2 636 412s-23.3 116.1-65.6 158.4z"/>',
+  'shopping':'<path d="M832 312H696v-16c0-101.6-82.4-184-184-184s-184 82.4-184 184v16H192c-17.7 0-32 14.3-32 32v536c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V344c0-17.7-14.3-32-32-32zm-432-16c0-61.9 50.1-112 112-112s112 50.1 112 112v16H400v-16zm392 544H232V384h96v88c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-88h224v88c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-88h96v456z"/>',
+  'database':'<path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-600 72h560v208H232V136zm560 480H232V408h560v208zm0 272H232V680h560v208zM304 240a40 40 0 1 0 80 0 40 40 0 1 0-80 0zm0 272a40 40 0 1 0 80 0 40 40 0 1 0-80 0zm0 272a40 40 0 1 0 80 0 40 40 0 1 0-80 0z"/>',
+  'book':'<path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-260 72h96v209.9L621.5 312 572 347.4V136zm220 752H232V136h280v296.9c0 3.3 1 6.6 3 9.3a15.9 15.9 0 0 0 22.3 3.7l83.8-59.9 81.4 59.4c2.7 2 6 3.1 9.4 3.1 8.8 0 16-7.2 16-16V136h64v752z"/>',
+  'bell':'<path d="M816 768h-24V428c0-141.1-104.3-257.7-240-277.1V112c0-22.1-17.9-40-40-40s-40 17.9-40 40v38.9c-135.7 19.4-240 136-240 277.1v340h-24c-17.7 0-32 14.3-32 32v32c0 4.4 3.6 8 8 8h216c0 61.8 50.2 112 112 112s112-50.2 112-112h216c4.4 0 8-3.6 8-8v-32c0-17.7-14.3-32-32-32zM512 888c-26.5 0-48-21.5-48-48h96c0 26.5-21.5 48-48 48zM304 768V428c0-55.6 21.6-107.8 60.9-147.1S456.4 220 512 220c55.6 0 107.8 21.6 147.1 60.9S720 372.4 720 428v340H304z"/>',
+  'smartphone':'<path d="M744 62H280c-35.3 0-64 28.7-64 64v768c0 35.3 28.7 64 64 64h464c35.3 0 64-28.7 64-64V126c0-35.3-28.7-64-64-64zm-8 824H288V134h448v752zM472 784a40 40 0 1 0 80 0 40 40 0 1 0-80 0z"/>',
+  'globe':'<path d="M854.4 800.9c.2-.3.5-.6.7-.9C920.6 722.1 960 621.7 960 512s-39.4-210.1-104.8-288c-.2-.3-.5-.5-.7-.8-1.1-1.3-2.1-2.5-3.2-3.7-.4-.5-.8-.9-1.2-1.4l-4.1-4.7-.1-.1c-1.5-1.7-3.1-3.4-4.6-5.1l-.1-.1c-3.2-3.4-6.4-6.8-9.7-10.1l-.1-.1-4.8-4.8-.3-.3c-1.5-1.5-3-2.9-4.5-4.3-.5-.5-1-1-1.6-1.5-1-1-2-1.9-3-2.8-.3-.3-.7-.6-1-1C736.4 109.2 629.5 64 512 64s-224.4 45.2-304.3 119.2c-.3.3-.7.6-1 1-1 .9-2 1.9-3 2.9-.5.5-1 1-1.6 1.5-1.5 1.4-3 2.9-4.5 4.3l-.3.3-4.8 4.8-.1.1c-3.3 3.3-6.5 6.7-9.7 10.1l-.1.1c-1.6 1.7-3.1 3.4-4.6 5.1l-.1.1c-1.4 1.5-2.8 3.1-4.1 4.7-.4.5-.8.9-1.2 1.4-1.1 1.2-2.1 2.5-3.2 3.7-.2.3-.5.5-.7.8C103.4 301.9 64 402.3 64 512s39.4 210.1 104.8 288c.2.3.5.6.7.9l3.1 3.7c.4.5.8.9 1.2 1.4l4.1 4.7c0 .1.1.1.1.2 1.5 1.7 3 3.4 4.6 5l.1.1c3.2 3.4 6.4 6.8 9.6 10.1l.1.1c1.6 1.6 3.1 3.2 4.7 4.7l.3.3c3.3 3.3 6.7 6.5 10.1 9.6 80.1 74 187 119.2 304.5 119.2s224.4-45.2 304.3-119.2a300 300 0 0 0 10-9.6l.3-.3c1.6-1.6 3.2-3.1 4.7-4.7l.1-.1c3.3-3.3 6.5-6.7 9.6-10.1l.1-.1c1.5-1.7 3.1-3.3 4.6-5 0-.1.1-.1.1-.2 1.4-1.5 2.8-3.1 4.1-4.7.4-.5.8-.9 1.2-1.4a99 99 0 0 0 3.3-3.7zm4.1-142.6c-13.8 32.6-32 62.8-54.2 90.2a444.07 444.07 0 0 0-81.5-55.9c11.6-46.9 18.8-98.4 20.7-152.6H887c-3 40.9-12.6 80.6-28.5 118.3zM887 484H743.5c-1.9-54.2-9.1-105.7-20.7-152.6 29.3-15.6 56.6-34.4 81.5-55.9A373.86 373.86 0 0 1 887 484zM658.3 165.5c39.7 16.8 75.8 40 107.6 69.2a394.72 394.72 0 0 1-59.4 41.8c-15.7-45-35.8-84.1-59.2-115.4 3.7 1.4 7.4 2.9 11 4.4zm-90.6 700.6c-9.2 7.2-18.4 12.7-27.7 16.4V697a389.1 389.1 0 0 1 115.7 26.2c-8.3 24.6-17.9 47.3-29 67.8-17.4 32.4-37.8 58.3-59 75.1zm59-633.1c11 20.6 20.7 43.3 29 67.8A389.1 389.1 0 0 1 540 327V141.6c9.2 3.7 18.5 9.1 27.7 16.4 21.2 16.7 41.6 42.6 59 75zM540 640.9V540h147.5c-1.6 44.2-7.1 87.1-16.3 127.8l-.3 1.2A445.02 445.02 0 0 0 540 640.9zm0-156.9V383.1c45.8-2.8 89.8-12.5 130.9-28.1l.3 1.2c9.2 40.7 14.7 83.5 16.3 127.8H540zm-56 56v100.9c-45.8 2.8-89.8 12.5-130.9 28.1l-.3-1.2c-9.2-40.7-14.7-83.5-16.3-127.8H484zm-147.5-56c1.6-44.2 7.1-87.1 16.3-127.8l.3-1.2c41.1 15.6 85 25.3 130.9 28.1V484H336.5zM484 697v185.4c-9.2-3.7-18.5-9.1-27.7-16.4-21.2-16.7-41.7-42.7-59.1-75.1-11-20.6-20.7-43.3-29-67.8 37.2-14.6 75.9-23.3 115.8-26.1zm0-370a389.1 389.1 0 0 1-115.7-26.2c8.3-24.6 17.9-47.3 29-67.8 17.4-32.4 37.8-58.4 59.1-75.1 9.2-7.2 18.4-12.7 27.7-16.4V327zM365.7 165.5c3.7-1.5 7.3-3 11-4.4-23.4 31.3-43.5 70.4-59.2 115.4-21-12-40.9-26-59.4-41.8 31.8-29.2 67.9-52.4 107.6-69.2zM165.5 365.7c13.8-32.6 32-62.8 54.2-90.2 24.9 21.5 52.2 40.3 81.5 55.9-11.6 46.9-18.8 98.4-20.7 152.6H137c3-40.9 12.6-80.6 28.5-118.3zM137 540h143.5c1.9 54.2 9.1 105.7 20.7 152.6a444.07 444.07 0 0 0-81.5 55.9A373.86 373.86 0 0 1 137 540zm228.7 318.5c-39.7-16.8-75.8-40-107.6-69.2 18.5-15.8 38.4-29.7 59.4-41.8 15.7 45 35.8 84.1 59.2 115.4-3.7-1.4-7.4-2.9-11-4.4zm292.6 0c-3.7 1.5-7.3 3-11 4.4 23.4-31.3 43.5-70.4 59.2-115.4 21 12 40.9 26 59.4 41.8a373.81 373.81 0 0 1-107.6 69.2z"/>',
+  'clock':'<path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"/><path d="M686.7 638.6L544.1 535.5V288c0-4.4-3.6-8-8-8H488c-4.4 0-8 3.6-8 8v275.4c0 2.6 1.2 5 3.3 6.5l165.4 120.6c3.6 2.6 8.6 1.8 11.2-1.7l28.6-39c2.6-3.7 1.8-8.7-1.8-11.2z"/>',
+  'list':'<path d="M912 192H328c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h584c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 284H328c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h584c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 284H328c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h584c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM104 228a56 56 0 1 0 112 0 56 56 0 1 0-112 0zm0 284a56 56 0 1 0 112 0 56 56 0 1 0-112 0zm0 284a56 56 0 1 0 112 0 56 56 0 1 0-112 0z"/>',
+  'message':'<path d="M464 512a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm200 0a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm-400 0a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm661.2-173.6c-22.6-53.7-55-101.9-96.3-143.3a444.35 444.35 0 0 0-143.3-96.3C630.6 75.7 572.2 64 512 64h-2c-60.6.3-119.3 12.3-174.5 35.9a445.35 445.35 0 0 0-142 96.5c-40.9 41.3-73 89.3-95.2 142.8-23 55.4-34.6 114.3-34.3 174.9A449.4 449.4 0 0 0 112 714v152a46 46 0 0 0 46 46h152.1A449.4 449.4 0 0 0 510 960h2.1c59.9 0 118-11.6 172.7-34.3a444.48 444.48 0 0 0 142.8-95.2c41.3-40.9 73.8-88.7 96.5-142 23.6-55.2 35.6-113.9 35.9-174.5.3-60.9-11.5-120-34.8-175.6zm-151.1 438C704 845.8 611 884 512 884h-1.7c-60.3-.3-120.2-15.3-173.1-43.5l-8.4-4.5H188V695.2l-4.5-8.4C155.3 633.9 140.3 574 140 513.7c-.4-99.7 37.7-193.3 107.6-263.8 69.8-70.5 163.1-109.5 262.8-109.9h1.7c50 0 98.5 9.7 144.2 28.9 44.6 18.7 84.6 45.6 119 80 34.3 34.3 61.3 74.4 80 119 19.4 46.2 29.1 95.2 28.9 145.8-.6 99.6-39.7 192.9-110.1 262.7z"/>',
+  'order':'<path d="M880 112H144c-17.7 0-32 14.3-32 32v736c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V144c0-17.7-14.3-32-32-32zm-40 728H184V184h656v656zM492 400h184c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H492c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h184c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H492c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h184c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H492c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zM340 368a40 40 0 1 0 80 0 40 40 0 1 0-80 0zm0 144a40 40 0 1 0 80 0 40 40 0 1 0-80 0zm0 144a40 40 0 1 0 80 0 40 40 0 1 0-80 0z"/>',
+  'writeoff':'<path d="M676 565c-50.8 0-92 41.2-92 92s41.2 92 92 92 92-41.2 92-92-41.2-92-92-92zm0 126c-18.8 0-34-15.2-34-34s15.2-34 34-34 34 15.2 34 34-15.2 34-34 34zm204-523H668c0-30.9-25.1-56-56-56h-80c-30.9 0-56 25.1-56 56H264c-17.7 0-32 14.3-32 32v200h-88c-17.7 0-32 14.3-32 32v448c0 17.7 14.3 32 32 32h336c17.7 0 32-14.3 32-32v-16h368c17.7 0 32-14.3 32-32V200c0-17.7-14.3-32-32-32zm-412 64h72v-56h64v56h72v48H468v-48zm-20 616H176V616h272v232zm0-296H176v-88h272v88zm392 240H512V432c0-17.7-14.3-32-32-32H304V240h100v104h336V240h100v552zM704 408v96c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-96c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8zM592 512h48c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z"/>',
+  'comment':'<path d="M573 421c-23.1 0-41 17.9-41 40s17.9 40 41 40c21.1 0 39-17.9 39-40s-17.9-40-39-40zM293 421c-23.1 0-41 17.9-41 40s17.9 40 41 40c21.1 0 39-17.9 39-40s-17.9-40-39-40z"/><path d="M894 345c-48.1-66-115.3-110.1-189-130v0.1c-17.1-19-36.4-36.5-58-52.1-163.7-119-393.5-82.7-513 81-96.3 133-92.2 311.9 6 439l0.8 132.6c0 3.2 0.5 6.4 1.5 9.4 5.3 16.9 23.3 26.2 40.1 20.9L309 806c33.5 11.9 68.1 18.7 102.5 20.6l-0.5 0.4c89.1 64.9 205.9 84.4 313 49l127.1 41.4c3.2 1 6.5 1.6 9.9 1.6 17.7 0 32-14.3 32-32V753c88.1-119.6 90.4-284.9 1-408zM323 735l-12-5-99 31-1-104-8-9c-84.6-103.2-90.2-251.9-11-361 96.4-132.2 281.2-161.4 413-66 132.2 96.1 161.5 280.6 66 412-80.1 109.9-223.5 150.5-348 102z m505-17l-8 10 1 104-98-33-12 5c-56 20.8-115.7 22.5-171 7l-0.2-0.1C613.7 788.2 680.7 742.2 729 676c76.4-105.3 88.8-237.6 44.4-350.4l0.6 0.4c23 16.5 44.1 37.1 62 62 72.6 99.6 68.5 235.2-8 330z"/><path d="M433 421c-23.1 0-41 17.9-41 40s17.9 40 41 40c21.1 0 39-17.9 39-40s-17.9-40-39-40z"/>',
+  'frequent':'<path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"/><path d="M686.7 638.6L544.1 535.5V288c0-4.4-3.6-8-8-8H488c-4.4 0-8 3.6-8 8v275.4c0 2.6 1.2 5 3.3 6.5l165.4 120.6c3.6 2.6 8.6 1.8 11.2-1.7l28.6-39c2.6-3.7 1.8-8.7-1.8-11.2z"/>',
+  'datacenter':'<path d="M888 792H200V168c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v688c0 4.4 3.6 8 8 8h752c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm-600-80h56c4.4 0 8-3.6 8-8V560c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v144c0 4.4 3.6 8 8 8zm152 0h56c4.4 0 8-3.6 8-8V384c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v320c0 4.4 3.6 8 8 8zm152 0h56c4.4 0 8-3.6 8-8V462c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v242c0 4.4 3.6 8 8 8zm152 0h56c4.4 0 8-3.6 8-8V304c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v400c0 4.4 3.6 8 8 8z"/>',
+  'report':'<path d="M854.6 288.6L639.4 73.4c-6-6-14.1-9.4-22.6-9.4H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V311.3c0-8.5-3.4-16.7-9.4-22.7zM790.2 326H602V137.8L790.2 326zm1.8 562H232V136h302v216a42 42 0 0 0 42 42h216v494zM504 618H320c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h184c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8zM312 490v48c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H320c-4.4 0-8 3.6-8 8z"/>',
+  'supplier':'<path d="M882 272.1V144c0-17.7-14.3-32-32-32H174c-17.7 0-32 14.3-32 32v128.1c-16.7 1-30 14.9-30 31.9v131.7a177 177 0 0 0 14.4 70.4c4.3 10.2 9.6 19.8 15.6 28.9v345c0 17.6 14.3 32 32 32h676c17.7 0 32-14.3 32-32V535a175 175 0 0 0 15.6-28.9c9.5-22.3 14.4-46 14.4-70.4V304c0-17-13.3-30.9-30-31.9zM214 184h596v88H214v-88zm362 656.1H448V736h128v104.1zm234 0H640V704c0-17.7-14.3-32-32-32H416c-17.7 0-32 14.3-32 32v136.1H214V597.9c2.9 1.4 5.9 2.8 9 4 22.3 9.4 46 14.1 70.4 14.1s48-4.7 70.4-14.1c13.8-5.8 26.8-13.2 38.7-22.1.2-.1.4-.1.6 0a180.4 180.4 0 0 0 38.7 22.1c22.3 9.4 46 14.1 70.4 14.1 24.4 0 48-4.7 70.4-14.1 13.8-5.8 26.8-13.2 38.7-22.1.2-.1.4-.1.6 0a180.4 180.4 0 0 0 38.7 22.1c22.3 9.4 46 14.1 70.4 14.1 24.4 0 48-4.7 70.4-14.1 3-1.3 6-2.6 9-4v242.2zm30-404.4c0 59.8-49 108.3-109.3 108.3-40.8 0-76.4-22.1-95.2-54.9-2.9-5-8.1-8.1-13.9-8.1h-.6c-5.7 0-11 3.1-13.9 8.1A109.24 109.24 0 0 1 512 544c-40.7 0-76.2-22-95-54.7-3-5.1-8.4-8.3-14.3-8.3s-11.4 3.2-14.3 8.3a109.63 109.63 0 0 1-95.1 54.7C233 544 184 495.5 184 435.7v-91.2c0-.3.2-.5.5-.5h655c.3 0 .5.2.5.5v91.2z"/>',
+  'auth':'<path d="M832 464h-68V240c0-70.7-57.3-128-128-128H388c-70.7 0-128 57.3-128 128v224h-68c-17.7 0-32 14.3-32 32v384c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V496c0-17.7-14.3-32-32-32zM332 240c0-30.9 25.1-56 56-56h248c30.9 0 56 25.1 56 56v224H332V240zm460 600H232V536h560v304zM484 701v53c0 4.4 3.6 8 8 8h40c4.4 0 8-3.6 8-8v-53a48.01 48.01 0 1 0-56 0z"/>',
+  'otp':'<path d="M512 64L128 192v384c0 212.1 171.9 384 384 384s384-171.9 384-384V192L512 64zm312 512c0 172.3-139.7 312-312 312S200 748.3 200 576V246l312-110 312 110v330z"/><path d="M378.4 475.1a35.91 35.91 0 0 0-50.9 0 35.91 35.91 0 0 0 0 50.9l129.4 129.4 2.1 2.1a33.98 33.98 0 0 0 48.1 0L730.6 434a33.98 33.98 0 0 0 0-48.1l-2.8-2.8a33.98 33.98 0 0 0-48.1 0L483 579.7 378.4 475.1z"/>',
+  'info-filled':'<path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm32 664c0 4.4-3.6 8-8 8h-48c-4.4 0-8-3.6-8-8V456c0-4.4 3.6-8 8-8h48c4.4 0 8 3.6 8 8v272zm-32-344a48.01 48.01 0 0 1 0-96 48.01 48.01 0 0 1 0 96z"/>',
+  'chevron-up':'<path d="M890.5 755.3L537.9 269.2c-12.8-17.6-39-17.6-51.7 0L133.5 755.3A8 8 0 0 0 140 768h75c5.1 0 9.9-2.5 12.9-6.6L512 369.8l284.1 391.6c3 4.1 7.8 6.6 12.9 6.6h75c6.5 0 10.3-7.4 6.5-12.7z"/>',
+  'home':'<path d="M946.5 505L560.1 118.8l-25.9-25.9a31.5 31.5 0 0 0-44.4 0L77.5 505c-12.3 12.3-18.8 28.7-18.7 46 .1 35.9 29.1 65 65 65h42.5V940h691.7V616H900c17.5 0 34-6.8 46.4-19.3C958.9 584.3 965 568 965 550.5c0-17.3-6.8-33.6-18.5-45.5zM568 868H456V664h112v204zm217.9-325.7V868H632V640c0-22.1-17.9-40-40-40H432c-22.1 0-40 17.9-40 40v228H238.1V542.3h-96l370-369.7 23.1 23.1L882 542.3h-96.1z"/>',
   'ant-down':'<path d="M884 256h-75c-5.1 0-9.9 2.5-12.9 6.6L512 654.2 227.9 262.6c-3-4.1-7.8-6.6-12.9-6.6h-75c-6.5 0-10.3 7.4-6.5 12.7l352.6 486.1c12.8 17.6 39 17.6 51.7 0l352.6-486.1c3.9-5.3.1-12.7-6.4-12.7z"/>',
-  'ant-right':'<path d="M765.7 486.8L314.9 134.7A7.97 7.97 0 00302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V863c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 000-50.4z"/>',
-  'info-filled':'<path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z"/><rect x="480" y="456" width="64" height="288" rx="16" fill="#fff"/><circle cx="512" cy="356" r="40" fill="#fff"/>',
+  'ant-right':'<path d="M765.7 486.8L314.9 134.7A7.97 7.97 0 0 0 302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 0 0 0-50.4z"/>',
 };
 const IconComp = {
   name:'icon',
   props:{ name:String, size:{type:Number, default:16} },
-  computed:{ filled(){ return this.name in PF; }, path(){ return this.filled ? PF[this.name] : (P[this.name] || P['info']); } },
-  template:`<span class="icon"><svg v-if="filled" :width="size" :height="size" viewBox="0 0 1024 1024" fill="currentColor" v-html="path"></svg><svg v-else :width="size" :height="size" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="path"></svg></span>`
+  computed:{ path(){ return ICON[this.name] || ICON['info']; } },
+  template:`<span class="icon"><svg :width="size" :height="size" viewBox="0 0 1024 1024" fill="currentColor" v-html="path"></svg></span>`
 };
 
 /* ---- shared sub-components ---- */
@@ -1247,7 +1313,7 @@ const app = createApp({
       // 更改庫存模式 wizard
       wizardStep:1, wType:'limited', wDate:'ind', wSku:'ind',
       weekHead:['週一','週二','週三','週四','週五','週六','週日'],
-      sessions:[], sessUnit:'場次', noSess:false, prodTitle:'', prodPlan:'', dimLabels:[],
+      sessions:[], sessUnit:'場次', noSess:false, prodTitle:'', prodPlan:'', prodId:'', planId:'', curPlans:[], dimLabels:[],
       // ---- reactive inventory state ----
       stock:{},      // key `${dk}_${se}_${id}` -> number
       online:{},     // key `${dk}_${se}_${id}` -> boolean
@@ -1257,7 +1323,7 @@ const app = createApp({
       statBatch:false, batchSessFrom:null, batchSessTo:null,   // 銷售狀態批次 + 場次範圍
       sessClosed:{},   // 場次收合狀態（key=場次時間）
       // ---- calendar view / filter ----
-      viewY:2025, viewM:12, calView:'month', weekStart:'2025-12-01', monthsList:[], todayKey:'2025-12-15',
+      viewY:2025, viewM:12, calView:'month', weekStart:'2025-12-01', monthsList:[], todayKey:'2025-12-15', hdCollapsed:false,
       monthMenuOpen:false, menuYear:2025,   // 月曆 header 月份下拉
       activeSkus:null,   // null = all
       fExpanded:false, fDims:{}, fExclude:[],   // 維度篩選狀態（fDims: dimIdx -> 已選值[]）
@@ -1271,7 +1337,13 @@ const app = createApp({
       // 每種庫存模式對應「合理的」示範商品（標題／方案／場次／維度／SKU）
       modeContent:{
         ind_ind:{   // 日期獨立×SKU獨立：門票，每日每規格各自庫存
-          title:'東京迪士尼樂園門票', plan:'一日護照 ｜ 標準電子票券',
+          pid:'125624', planId:'570970',
+          plans:[
+            {id:'570970', name:'中文導覽服務+經典迪士尼標準票券（可退改・含旅遊平安保險・附贈限定紀念品一份）'},
+            {id:'570971', name:'英文導覽服務+經典迪士尼標準票券（可退改・含旅遊平安保險）'},
+            {id:'571005', name:'無導覽｜迪士尼單園電子票券（標準・不含園區接駁）'},
+          ],
+          title:'東京迪士尼度假區 - 東京迪士尼樂園 & 東京迪士尼海洋門票（含園區接駁交通與中文真人導覽服務）', plan:'中文導覽服務+經典迪士尼標準票券（可退改・含旅遊平安保險・附贈限定紀念品一份）',
           sessions:['09:00','13:00'], unit:'場次', dims:['票種天數','適用樂園','年齡'],
           skus:[
             {id:1,name:'一日票 × 迪士尼樂園 × 成人',avail:755},
@@ -1289,6 +1361,11 @@ const app = createApp({
           ]
         },
         ind_shared:{   // 日期獨立×SKU共用：一日遊，每梯次座位固定、票種共用座位
+          pid:'118302', planId:'441207',
+          plans:[
+            {id:'441207', name:'中文導遊 ｜ 經典環湖方案'},
+            {id:'441208', name:'英文導遊 ｜ 經典環湖方案'},
+          ],
           title:'河口湖・富士山全景巴士一日遊', plan:'中文導遊 ｜ 經典環湖方案',
           sessions:['08:00','13:30'], unit:'出發', dims:['票種'],
           skus:[
@@ -1298,6 +1375,11 @@ const app = createApp({
           ]
         },
         shared_ind:{   // 日期共用×SKU獨立：周遊卡，各票種總量固定、不分日期
+          pid:'103845', planId:'388910',
+          plans:[
+            {id:'388910', name:'電子票券 ｜ 1 日標準方案'},
+            {id:'388911', name:'電子票券 ｜ 2 日方案'},
+          ],
           title:'大阪周遊卡 Osaka Amazing Pass', plan:'電子票券 ｜ 標準方案',
           sessions:['_'], noSess:true, unit:'', dims:['票券效期','年齡'],
           skus:[
@@ -1308,6 +1390,7 @@ const app = createApp({
           ]
         },
         shared_shared:{   // 日期共用×SKU共用：期間限定展，單一總名額、不分票種/日期
+          pid:'139560', planId:'602113',
           title:'teamLab Planets TOKYO 期間限定展', plan:'全展區通票 ｜ 共用入場名額',
           sessions:['10:00','13:00','16:00'], unit:'入場', dims:['票種'],
           skus:[
@@ -1317,6 +1400,11 @@ const app = createApp({
           ]
         },
         unlimited:{   // 無限量：eSIM，僅管理上下架
+          pid:'127094', planId:'515338',
+          plans:[
+            {id:'515338', name:'多流量方案 ｜ 高速上網'},
+            {id:'515339', name:'輕量方案 ｜ 標準上網'},
+          ],
           title:'日本 eSIM 上網方案', plan:'多流量方案 ｜ 高速上網',
           sessions:['_'], noSess:true, unit:'', dims:['流量','天數'],
           skus:[
@@ -1491,7 +1579,7 @@ const app = createApp({
       return dTxt+'、'+kTxt+sTxt;
     },
     // 錨點標籤：偵測日期/SKU 欄位是否被捲到 sticky 區上方；是→顯示對應 chip
-    onPanelScroll(){
+    onPanelScroll(e){
       const p=this.$refs.panelEl; if(!p) return;
       const tabs=p.querySelector('.panel-tabs'); const tabsH=tabs?tabs.offsetHeight:80;
       this.anchorsTop=tabsH;
@@ -1502,21 +1590,23 @@ const app = createApp({
       const dz=p.querySelector('.date-sec');
       // 日期欄位「若沒有 chip 推擠時的頂端」被捲到 tabs 底之上才釘；靜止(未捲動)時欄位緊貼 tabs 底＝不釘
       this.showDateChip = !!dz && (dz.getBoundingClientRect().top - chipsH) < (coverLine - 2);
+      // 註：右 panel 捲動「不」收合 header。因日期欄在 panel 最頂、使用者會很常回到那裡，
+      // 若 panel 捲動也連動 header，會在每次回頂時展開→跳動，干擾右側頻繁操作。header 收/開只由月曆捲動決定。
     },
     jumpTo(){
       const p=this.$refs.panelEl; if(!p) return;
-      // 日期 chip → 捲回日期欄位 + 展開日期選擇器
+      // 日期 chip → 捲回日期欄位。header 不手動碰：讓它順著捲動自然走——
+      // 捲上去的過程 scrollTop 單調下降、header 保持收合，捲到接近頂端(scrollTop≤8)時才展開，
+      // 正好就是「回到最上面日期後才展開」。捲動目標＝日期欄在 panel 內的位置−sticky 偏移，與頁面 header 收合與否無關，不會滑錯位。
       const el=p.querySelector('.date-sec'); if(!el) return;
       const tabs=p.querySelector('.panel-tabs'); const anchors=p.querySelector('.panel-anchors');
       const off=(tabs?tabs.offsetHeight:72)+(anchors?anchors.offsetHeight:0)+12;
       p.scrollTo({ top: p.scrollTop + el.getBoundingClientRect().top - p.getBoundingClientRect().top - off, behavior:'smooth' });
       setTimeout(()=>{
-        if(this.selContiguous){ this.dateOpen=true; }  // 連續多日：展開 RangePicker 日曆下拉
-        else {
-          // 分散多日：只 highlight「已選取 N 個日期」那個灰色區塊（.date-tags），非整個日期區（依設計稿 3549-218707）
-          const box=p.querySelector('.date-tags'); if(!box) return;
-          box.classList.remove('anchor-flash'); void box.offsetWidth; box.classList.add('anchor-flash'); clearTimeout(this._af); this._af=setTimeout(()=>box.classList.remove('anchor-flash'),1300);
-        }
+        // 兩種模式一致：捲回去後「只 highlight 日期欄」，不自動開 dropdown。
+        // 連續多日→flash RangePicker 輸入框(.ant-picker)；分散多日→flash「已選取 N 個日期」灰色區塊(.date-tags，依設計稿 3549-218707)。
+        const box = el.querySelector('.date-tags') || el.querySelector('.ant-picker') || el;
+        if(box){ box.classList.remove('anchor-flash'); void box.offsetWidth; box.classList.add('anchor-flash'); clearTimeout(this._af); this._af=setTimeout(()=>box.classList.remove('anchor-flash'),1300); }
       }, 340);
     },
     // ---- date helpers ----
@@ -1549,6 +1639,13 @@ const app = createApp({
       const cards=cont.querySelectorAll('.month-card'); let cur=null;
       cards.forEach(c=>{ if(c.getBoundingClientRect().top - top <= 24) cur=c; });
       if(cur){ const p=cur.getAttribute('data-ym').split('-'); this.viewY=+p[0]; this.viewM=+p[1]; }
+      this.setHdFromScroll(cont);   // header 收/開只由月曆捲動決定（右 panel 捲動不碰 header，見 onPanelScroll 註解）
+    },
+    // 商品/方案 header 收合：依月曆的 scrollTop 判斷。低門檻(8px)＝一開始捲就收(hide-on-scroll，位移融進捲動手勢)；
+    // 月曆回到頂(≤8)就展開。位移只發生在「正在捲的月曆」上，本來就是長內容往下捲、上面殼縮起來的慣例，順。
+    setHdFromScroll(el){
+      if(!el) return;
+      this.hdCollapsed = el.scrollTop > 8;
     },
     prevMonth(){
       const i=this.monthsList.findIndex(x=>x.y===this.viewY && x.m===this.viewM);
@@ -1579,7 +1676,8 @@ const app = createApp({
     loadMode(key){
       const c=this.modeContent[key]; if(!c) return;
       this.modeKey=key;
-      this.prodTitle=c.title; this.prodPlan=c.plan;
+      this.prodTitle=c.title; this.prodPlan=c.plan; this.prodId=c.pid||''; this.planId=c.planId||'';
+      this.curPlans = c.plans || [{id:c.planId||'', name:c.plan}];  // 方案切換清單（無設定則退回單一當前方案）
       this.sessions=c.sessions.slice(); this.sessUnit=c.unit; this.noSess=!!c.noSess;
       this.dimLabels=c.dims.slice();
       this.skus=c.skus.map(s=>({...s}));
@@ -1768,6 +1866,11 @@ const app = createApp({
       this.dayBatch=false; this.statBatch=false;
       this.flashBatch(dates, ses, ids);   // 單日→高亮SKU卡；多日→高亮日期格
     },
+    pickPlan({key}){
+      const p=this.curPlans.find(x=>x.id===key);
+      if(p){ this.planId=p.id; this.prodPlan=p.name; }  // 切換方案：更新當前方案 ID＋名稱（同商品、庫存模式不變）
+    },
+    getBody(){ return document.body; },  // 方案 dropdown 掛到 body，避免被 header 列的 overflow:hidden（收合動畫用）裁掉
     openSwitcher(){
       const m=this.currentMode;
       this.wType = m.unlimited?'unlimited':'limited';
